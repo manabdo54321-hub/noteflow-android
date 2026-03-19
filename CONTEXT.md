@@ -17,6 +17,9 @@
 - settings.gradle.kts
 - build.gradle.kts
 - gradle/wrapper/gradle-wrapper.properties
+- gradle/wrapper/gradle-wrapper.jar
+- gradle.properties
+- gradlew
 - app/build.gradle.kts
 - .github/workflows/build.yml
 - app/src/main/AndroidManifest.xml
@@ -25,7 +28,8 @@
 - CONTEXT.md
 
 ## المرحلة الحالية
-المرحلة 0 مكتملة — جاري التحقق من الـ Build
+✅ المرحلة 0 مكتملة — Build شغال
 
 ## الخطوة الجاية
-المرحلة 1: قاعدة البيانات — ابدأ بـ Note.kt
+المرحلة 1: قاعدة البيانات
+أول ملف: Note.kt
