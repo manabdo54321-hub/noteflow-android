@@ -31,12 +31,18 @@
 - app/src/main/java/com/noteflow/app/core/database/AppDatabase.kt
 - app/src/main/java/com/noteflow/app/features/notes/data/repository/NoteRepository.kt
 - app/src/main/java/com/noteflow/app/core/di/AppModule.kt
-- CONTEXT.md
+- app/src/main/java/com/noteflow/app/features/notes/domain/usecase/GetNotesUseCase.kt
+- app/src/main/java/com/noteflow/app/features/notes/domain/usecase/SaveNoteUseCase.kt
+- app/src/main/java/com/noteflow/app/features/notes/presentation/NoteViewModel.kt
+- app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteListScreen.kt
+- app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteDetailScreen.kt
+- app/src/main/java/com/noteflow/app/core/navigation/AppNavigation.kt
 
 ## المرحلة الحالية
 ✅ المرحلة 0 مكتملة — Build شغال
 ✅ المرحلة 1 مكتملة — قاعدة البيانات جاهزة
+✅ المرحلة 2 مكتملة — شاشات الملاحظات شغالة
 
 ## الخطوة الجاية
-المرحلة 2: شاشات الملاحظات
-أول ملف: GetNotesUseCase.kt
+المرحلة 3: المهام والبومودورو
+أول ملف: Task.kt
