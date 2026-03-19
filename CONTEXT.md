@@ -37,12 +37,19 @@
 - app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteListScreen.kt
 - app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteDetailScreen.kt
 - app/src/main/java/com/noteflow/app/core/navigation/AppNavigation.kt
+- app/src/main/java/com/noteflow/app/features/tasks/domain/model/Task.kt
+- app/src/main/java/com/noteflow/app/features/tasks/data/local/TaskEntity.kt
+- app/src/main/java/com/noteflow/app/features/tasks/data/local/TaskDao.kt
+- app/src/main/java/com/noteflow/app/features/tasks/data/repository/TaskRepository.kt
+- app/src/main/java/com/noteflow/app/features/tasks/presentation/TaskViewModel.kt
+- app/src/main/java/com/noteflow/app/features/tasks/presentation/screens/TaskListScreen.kt
 
 ## المرحلة الحالية
 ✅ المرحلة 0 مكتملة — Build شغال
 ✅ المرحلة 1 مكتملة — قاعدة البيانات جاهزة
 ✅ المرحلة 2 مكتملة — شاشات الملاحظات شغالة
+✅ المرحلة 3 مكتملة — المهام شغالة
 
 ## الخطوة الجاية
-المرحلة 3: المهام والبومودورو
-أول ملف: Task.kt
+المرحلة 4: البومودورو
+أول ملف: PomodoroState.kt
