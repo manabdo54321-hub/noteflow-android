@@ -8,6 +8,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteListScreen
+import com.noteflow.app.features.tasks.presentation.screens.TaskListScreen
 
 @Composable
 fun AppNavigation() {
@@ -29,6 +30,9 @@ fun AppNavigation() {
                 noteId = id,
                 onBack = { navController.popBackStack() }
             )
+        }
+        composable("tasks") {
+            TaskListScreen()
         }
     }
 }
