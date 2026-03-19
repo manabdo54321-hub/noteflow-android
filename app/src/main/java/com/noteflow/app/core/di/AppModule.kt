@@ -5,6 +5,8 @@ import androidx.room.Room
 import com.noteflow.app.core.database.AppDatabase
 import com.noteflow.app.features.notes.data.local.NoteDao
 import com.noteflow.app.features.notes.data.repository.NoteRepository
+import com.noteflow.app.features.tasks.data.local.TaskDao
+import com.noteflow.app.features.tasks.data.repository.TaskRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,7 +26,8 @@ object AppModule {
         context,
         AppDatabase::class.java,
         "noteflow_database"
-    ).build()
+    ).fallbackToDestructiveMigration()
+     .build()
 
     @Provides
     @Singleton
@@ -35,4 +38,14 @@ object AppModule {
     @Singleton
     fun provideNoteRepository(noteDao: NoteDao): NoteRepository =
         NoteRepository(noteDao)
+
+    @Provides
+    @Singleton
+    fun provideTaskDao(database: AppDatabase): TaskDao =
+        database.taskDao()
+
+    @Provides
+    @Singleton
+    fun provideTaskRepository(taskDao: TaskDao): TaskRepository =
+        TaskRepository(taskDao)
 }
