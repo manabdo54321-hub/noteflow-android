@@ -11,7 +11,7 @@
 - Room (قاعدة البيانات)
 - Hilt (Dependency Injection)
 - Navigation Compose
-- Coroutines
+- Coroutines + Flow
 
 ## الملفات الموجودة
 - settings.gradle.kts
@@ -25,11 +25,18 @@
 - app/src/main/AndroidManifest.xml
 - app/src/main/java/com/noteflow/app/MainActivity.kt
 - app/src/main/java/com/noteflow/app/NoteFlowApp.kt
+- app/src/main/java/com/noteflow/app/features/notes/domain/model/Note.kt
+- app/src/main/java/com/noteflow/app/features/notes/data/local/NoteEntity.kt
+- app/src/main/java/com/noteflow/app/features/notes/data/local/NoteDao.kt
+- app/src/main/java/com/noteflow/app/core/database/AppDatabase.kt
+- app/src/main/java/com/noteflow/app/features/notes/data/repository/NoteRepository.kt
+- app/src/main/java/com/noteflow/app/core/di/AppModule.kt
 - CONTEXT.md
 
 ## المرحلة الحالية
 ✅ المرحلة 0 مكتملة — Build شغال
+✅ المرحلة 1 مكتملة — قاعدة البيانات جاهزة
 
 ## الخطوة الجاية
-المرحلة 1: قاعدة البيانات
-أول ملف: Note.kt
+المرحلة 2: شاشات الملاحظات
+أول ملف: GetNotesUseCase.kt
