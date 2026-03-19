@@ -3,7 +3,7 @@
     <application
         android:name=".NoteFlowApp"
         android:label="NoteFlow"
-        android:theme="@style/Theme.AppCompat">
+        android:theme="@android:style/Theme.Light">
         <activity
             android:name=".MainActivity"
             android:exported="true">
