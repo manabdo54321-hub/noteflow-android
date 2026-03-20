@@ -2,6 +2,7 @@ package com.noteflow.app.features.notes.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.noteflow.app.features.notes.data.repository.NoteRepository
 import com.noteflow.app.features.notes.domain.model.Note
 import com.noteflow.app.features.notes.domain.usecase.GetNotesUseCase
 import com.noteflow.app.features.notes.domain.usecase.SaveNoteUseCase
@@ -15,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class NoteViewModel @Inject constructor(
     private val getNotesUseCase: GetNotesUseCase,
-    private val saveNoteUseCase: SaveNoteUseCase
+    private val saveNoteUseCase: SaveNoteUseCase,
+    private val repository: NoteRepository
 ) : ViewModel() {
 
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
@@ -24,6 +26,9 @@ class NoteViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _backlinks = MutableStateFlow<List<Note>>(emptyList())
+    val backlinks: StateFlow<List<Note>> = _backlinks.asStateFlow()
+
     init {
         loadNotes()
     }
@@ -31,6 +36,14 @@ class NoteViewModel @Inject constructor(
     private fun loadNotes() {
         viewModelScope.launch {
             getNotesUseCase().collect { _notes.value = it }
+        }
+    }
+
+    fun loadBacklinks(noteTitle: String, noteId: Long) {
+        viewModelScope.launch {
+            repository.getBacklinks(noteTitle, noteId).collect {
+                _backlinks.value = it
+            }
         }
     }
 
