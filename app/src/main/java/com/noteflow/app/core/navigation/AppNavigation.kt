@@ -148,6 +148,9 @@ fun AppNavigation(
             }
             composable("home") {
                 HomeScreen(
+                    onNavigateToNotes = { navController.navigate("notes") },
+                    onNavigateToStats = { navController.navigate("stats") },
+                    onNavigateToSettings = { navController.navigate("settings") },
                     onNoteClick = { id -> navController.navigate("note/$id") },
                     onAddNote = { navController.navigate("note/0") },
                     onNavigateToTimer = { navController.navigate("timer") },
