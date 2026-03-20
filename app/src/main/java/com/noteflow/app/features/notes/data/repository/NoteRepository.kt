@@ -30,4 +30,9 @@ class NoteRepository @Inject constructor(
 
     suspend fun deleteNote(note: Note) =
         noteDao.deleteNote(NoteEntity.fromDomain(note))
+
+    fun getBacklinks(noteTitle: String, noteId: Long): Flow<List<Note>> =
+        noteDao.getBacklinks(noteTitle, noteId).map { entities ->
+            entities.map { it.toDomain() }
+        }
 }
