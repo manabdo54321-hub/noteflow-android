@@ -19,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.noteflow.app.features.intro.presentation.IntroScreen
+import com.noteflow.app.features.intro.presentation.OnboardingScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteListScreen
 import com.noteflow.app.features.settings.presentation.screens.SettingsScreen
@@ -75,15 +76,32 @@ fun AppNavigation(
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = if (isFirstTime) "intro" else "notes",
+            startDestination = "intro",
             modifier = Modifier.padding(padding)
         ) {
+            // كل مرة
             composable("intro") {
                 IntroScreen(
                     onFinished = {
+                        if (isFirstTime) {
+                            navController.navigate("onboarding") {
+                                popUpTo("intro") { inclusive = true }
+                            }
+                        } else {
+                            navController.navigate("notes") {
+                                popUpTo("intro") { inclusive = true }
+                            }
+                        }
+                    }
+                )
+            }
+            // أول مرة بس
+            composable("onboarding") {
+                OnboardingScreen(
+                    onFinished = {
                         onOnboardingFinished()
                         navController.navigate("notes") {
-                            popUpTo("intro") { inclusive = true }
+                            popUpTo("onboarding") { inclusive = true }
                         }
                     }
                 )
@@ -112,15 +130,9 @@ fun AppNavigation(
                     onNavigateToNote = { id -> navController.navigate("note/$id") }
                 )
             }
-            composable("timer") {
-                TimerScreen()
-            }
-            composable("stats") {
-                StatsScreen()
-            }
-            composable("settings") {
-                SettingsScreen()
-            }
+            composable("timer") { TimerScreen() }
+            composable("stats") { StatsScreen() }
+            composable("settings") { SettingsScreen() }
         }
     }
 }
