@@ -2,6 +2,7 @@ package com.noteflow.app.core.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
@@ -21,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.noteflow.app.features.home.presentation.HomeScreen
 import com.noteflow.app.features.intro.presentation.IntroScreen
 import com.noteflow.app.features.intro.presentation.OnboardingScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
@@ -73,7 +75,7 @@ fun AppNavigation(
                             icon = {
                                 if (isAdd) {
                                     Surface(
-                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                                        shape = RoundedCornerShape(16.dp),
                                         color = PrimaryColor,
                                         modifier = Modifier.size(48.dp)
                                     ) {
@@ -145,9 +147,11 @@ fun AppNavigation(
                 )
             }
             composable("home") {
-                NoteListScreen(
+                HomeScreen(
                     onNoteClick = { id -> navController.navigate("note/$id") },
-                    onAddNote = { navController.navigate("note/0") }
+                    onAddNote = { navController.navigate("note/0") },
+                    onNavigateToTimer = { navController.navigate("timer") },
+                    onNavigateToTasks = { navController.navigate("tasks") }
                 )
             }
             composable("notes") {
