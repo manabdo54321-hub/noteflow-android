@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,51 +28,104 @@ fun TaskListScreen(
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val notes by noteViewModel.notes.collectAsState()
+
+    val activeTasks = tasks.filter { !it.isCompleted }
+    val completedTasks = tasks.filter { it.isCompleted }
+
     var showDialog by remember { mutableStateOf(false) }
+    var editingTask by remember { mutableStateOf<Task?>(null) }
     var newTitle by remember { mutableStateOf("") }
     var selectedNoteId by remember { mutableStateOf<Long?>(null) }
     var showNotePicker by remember { mutableStateOf(false) }
+    var showCompleted by remember { mutableStateOf(false) }
+    var taskToDelete by remember { mutableStateOf<Task?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("المهام") })
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showDialog = true }) {
+            FloatingActionButton(onClick = {
+                editingTask = null
+                newTitle = ""
+                selectedNoteId = null
+                showDialog = true
+            }) {
                 Icon(Icons.Default.Add, contentDescription = "مهمة جديدة")
             }
         }
     ) { padding ->
-        if (tasks.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("مفيش مهام لسه", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(tasks, key = { task -> task.id }) { task ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // المهام النشطة
+            if (activeTasks.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("مفيش مهام لسه ✨", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            } else {
+                items(activeTasks, key = { it.id }) { task ->
                     TaskItem(
                         task = task,
-                        linkedNoteName = notes.find { note -> note.id == task.noteId }?.title,
+                        linkedNoteName = notes.find { it.id == task.noteId }?.title,
                         onToggle = { taskViewModel.toggleComplete(task) },
-                        onDelete = { taskViewModel.deleteTask(task) },
+                        onDelete = { taskToDelete = task },
+                        onEdit = {
+                            editingTask = task
+                            newTitle = task.title
+                            selectedNoteId = task.noteId
+                            showDialog = true
+                        },
                         onNoteClick = { task.noteId?.let { nid -> onNavigateToNote(nid) } }
                     )
+                }
+            }
+
+            // سجل المكتملة
+            if (completedTasks.isNotEmpty()) {
+                item {
+                    Divider()
+                    TextButton(onClick = { showCompleted = !showCompleted }) {
+                        Text(
+                            if (showCompleted) "إخفاء المكتملة (${completedTasks.size})"
+                            else "عرض المكتملة (${completedTasks.size})",
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                if (showCompleted) {
+                    items(completedTasks, key = { it.id }) { task ->
+                        TaskItem(
+                            task = task,
+                            linkedNoteName = notes.find { it.id == task.noteId }?.title,
+                            onToggle = { taskViewModel.toggleComplete(task) },
+                            onDelete = { taskToDelete = task },
+                            onEdit = {
+                                editingTask = task
+                                newTitle = task.title
+                                selectedNoteId = task.noteId
+                                showDialog = true
+                            },
+                            onNoteClick = { task.noteId?.let { nid -> onNavigateToNote(nid) } }
+                        )
+                    }
                 }
             }
         }
     }
 
+    // Dialog إضافة/تعديل مهمة
     if (showDialog) {
         AlertDialog(
-            onDismissRequest = { showDialog = false; newTitle = ""; selectedNoteId = null },
-            title = { Text("مهمة جديدة") },
+            onDismissRequest = { showDialog = false; newTitle = ""; selectedNoteId = null; editingTask = null },
+            title = { Text(if (editingTask != null) "تعديل المهمة" else "مهمة جديدة") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
@@ -81,7 +135,7 @@ fun TaskListScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    val linkedNote = notes.find { note -> note.id == selectedNoteId }
+                    val linkedNote = notes.find { it.id == selectedNoteId }
                     OutlinedButton(
                         onClick = { showNotePicker = true },
                         modifier = Modifier.fillMaxWidth()
@@ -94,10 +148,15 @@ fun TaskListScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    taskViewModel.saveTask(newTitle, selectedNoteId)
+                    if (editingTask != null) {
+                        taskViewModel.saveTask(newTitle, selectedNoteId, editingTask!!.id)
+                    } else {
+                        taskViewModel.saveTask(newTitle, selectedNoteId)
+                    }
                     showDialog = false
                     newTitle = ""
                     selectedNoteId = null
+                    editingTask = null
                 }) { Text("حفظ") }
             },
             dismissButton = {
@@ -105,11 +164,13 @@ fun TaskListScreen(
                     showDialog = false
                     newTitle = ""
                     selectedNoteId = null
+                    editingTask = null
                 }) { Text("إلغاء") }
             }
         )
     }
 
+    // Dialog اختيار ملاحظة
     if (showNotePicker) {
         AlertDialog(
             onDismissRequest = { showNotePicker = false },
@@ -141,6 +202,26 @@ fun TaskListScreen(
             confirmButton = {}
         )
     }
+
+    // Dialog تأكيد الحذف
+    if (taskToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { taskToDelete = null },
+            title = { Text("حذف المهمة") },
+            text = { Text("متأكد إنك عايز تحذف \"${taskToDelete!!.title}\"؟") },
+            confirmButton = {
+                TextButton(onClick = {
+                    taskViewModel.deleteTask(taskToDelete!!)
+                    taskToDelete = null
+                }) {
+                    Text("حذف", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { taskToDelete = null }) { Text("إلغاء") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -149,6 +230,7 @@ fun TaskItem(
     linkedNoteName: String?,
     onToggle: () -> Unit,
     onDelete: () -> Unit,
+    onEdit: () -> Unit,
     onNoteClick: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -171,11 +253,7 @@ fun TaskItem(
                         onClick = onNoteClick,
                         contentPadding = PaddingValues(0.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Link,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp)
-                        )
+                        Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(linkedNoteName, style = MaterialTheme.typography.labelSmall)
                     }
@@ -183,10 +261,16 @@ fun TaskItem(
             }
             if (task.pomodoroCount > 0) {
                 Text("🍅 ${task.pomodoroCount}", style = MaterialTheme.typography.labelMedium)
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Default.Edit, contentDescription = "تعديل",
+                    modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "حذف")
+                Icon(Icons.Default.Delete, contentDescription = "حذف",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp))
             }
         }
     }
