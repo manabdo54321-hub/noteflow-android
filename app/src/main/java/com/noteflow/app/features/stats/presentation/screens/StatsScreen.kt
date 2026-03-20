@@ -26,13 +26,13 @@ fun StatsScreen(
 ) {
     val notes by noteViewModel.notes.collectAsState()
     val tasks by taskViewModel.tasks.collectAsState()
-    val totalSessions by timerViewModel.totalWorkSessions.collectAsState()
+    val completedSessions by timerViewModel.completedSessions.collectAsState()
 
     val completedToday = tasks.count { task ->
         task.isCompleted && isToday(task.createdAt)
     }
     val totalCompleted = tasks.count { it.isCompleted }
-    val totalHours = (totalSessions * 25) / 60f
+    val totalHours = (completedSessions * 25) / 60f
 
     Scaffold(
         topBar = {
@@ -76,7 +76,7 @@ fun StatsScreen(
                     StatCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.Timer,
-                        value = "${totalSessions}",
+                        value = "$completedSessions",
                         label = "جلسة",
                         color = MaterialTheme.colorScheme.tertiary
                     )
@@ -93,15 +93,9 @@ fun StatsScreen(
                 )
             }
 
-            item {
-                DetailRow(label = "مهام خلصت النهارده", value = "$completedToday")
-            }
-            item {
-                DetailRow(label = "إجمالي المهام المكتملة", value = "$totalCompleted / ${tasks.size}")
-            }
-            item {
-                DetailRow(label = "ساعات تركيز إجمالية", value = "${"%.1f".format(totalHours)} ساعة")
-            }
+            item { DetailRow(label = "مهام خلصت النهارده", value = "$completedToday") }
+            item { DetailRow(label = "إجمالي المهام المكتملة", value = "$totalCompleted / ${tasks.size}") }
+            item { DetailRow(label = "ساعات تركيز إجمالية", value = "${"%.1f".format(totalHours)} ساعة") }
             item {
                 DetailRow(
                     label = "ملاحظات مترابطة",
