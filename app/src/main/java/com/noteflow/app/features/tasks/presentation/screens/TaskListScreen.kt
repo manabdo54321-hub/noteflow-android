@@ -35,8 +35,8 @@ private val AccentColor = Color(0xFF8A70FF)
 private val OnSurfaceVariant = Color(0xFFC8C5CD)
 private val HighPriorityColor = Color(0xFFFF6B6B)
 private val MediumPriorityColor = Color(0xFFFFBA00)
+private val TertiaryColor = Color(0xFF75D1FF)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
     onNavigateToNote: (Long) -> Unit = {},
@@ -58,9 +58,8 @@ fun TaskListScreen(
 
     val activeTasks = tasks.filter { !it.isCompleted }
     val completedTasks = tasks.filter { it.isCompleted }
-
     val highPriority = activeTasks.filter { it.priority == TaskPriority.HIGH }
-    val otherTasks = activeTasks.filter { it.priority != TaskPriority.HIGH }
+    val routineTasks = activeTasks.filter { it.priority != TaskPriority.HIGH }
 
     Box(
         modifier = Modifier
@@ -84,8 +83,10 @@ fun TaskListScreen(
                     Icon(Icons.Default.Menu, contentDescription = null, tint = OnSurfaceVariant)
                     Text("NoteFlow", fontWeight = FontWeight.Bold,
                         fontSize = 18.sp, color = Color.White)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = OnSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Search, contentDescription = null,
+                            tint = OnSurfaceVariant)
                         Box(
                             modifier = Modifier
                                 .size(32.dp)
@@ -132,7 +133,8 @@ fun TaskListScreen(
                                     if (selectedTab == index)
                                         Brush.horizontalGradient(listOf(PrimaryColor, AccentColor))
                                     else
-                                        Brush.horizontalGradient(listOf(Color.Transparent, Color.Transparent))
+                                        Brush.horizontalGradient(listOf(
+                                            Color.Transparent, Color.Transparent))
                                 )
                                 .clickable { selectedTab = index }
                                 .padding(vertical = 10.dp),
@@ -141,8 +143,10 @@ fun TaskListScreen(
                             Text(
                                 text = tab,
                                 fontSize = 13.sp,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selectedTab == index) Color(0xFF1C0062) else OnSurfaceVariant
+                                fontWeight = if (selectedTab == index) FontWeight.Bold
+                                    else FontWeight.Normal,
+                                color = if (selectedTab == index) Color(0xFF1C0062)
+                                    else OnSurfaceVariant
                             )
                         }
                     }
@@ -155,12 +159,12 @@ fun TaskListScreen(
                     if (highPriority.isNotEmpty()) {
                         item {
                             Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(
+                                    horizontal = 16.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Box(modifier = Modifier
-                                    .size(8.dp).clip(CircleShape)
+                                Box(modifier = Modifier.size(8.dp).clip(CircleShape)
                                     .background(HighPriorityColor))
                                 Text("أولوية عالية", fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold, color = HighPriorityColor)
@@ -170,6 +174,9 @@ fun TaskListScreen(
                             TaskCard(
                                 task = task,
                                 linkedNoteName = notes.find { it.id == task.noteId }?.title,
+                                badge = "وقت محدود",
+                                badgeColor = HighPriorityColor,
+                                isHighPriority = true,
                                 onToggle = { taskViewModel.toggleComplete(task) },
                                 onDelete = { taskToDelete = task },
                                 onEdit = {
@@ -178,31 +185,43 @@ fun TaskListScreen(
                                     selectedNoteId = task.noteId
                                     showDialog = true
                                 },
-                                onNoteClick = { task.noteId?.let { nid -> onNavigateToNote(nid) } },
-                                isHighPriority = true
+                                onNoteClick = {
+                                    task.noteId?.let { nid -> onNavigateToNote(nid) }
+                                }
                             )
                         }
                     }
 
-                    // Other Tasks
-                    if (otherTasks.isNotEmpty()) {
+                    // Routine
+                    if (routineTasks.isNotEmpty()) {
                         item {
                             Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(
+                                    horizontal = 16.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Box(modifier = Modifier
-                                    .size(8.dp).clip(CircleShape)
+                                Box(modifier = Modifier.size(8.dp).clip(CircleShape)
                                     .background(MediumPriorityColor))
                                 Text("روتين", fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold, color = MediumPriorityColor)
                             }
                         }
-                        items(otherTasks, key = { it.id }) { task ->
+                        items(routineTasks, key = { it.id }) { task ->
+                            val badge = when (task.priority) {
+                                TaskPriority.MEDIUM -> "عمل"
+                                TaskPriority.LOW -> "شخصي"
+                                else -> null
+                            }
                             TaskCard(
                                 task = task,
                                 linkedNoteName = notes.find { it.id == task.noteId }?.title,
+                                badge = badge,
+                                badgeColor = when (task.priority) {
+                                    TaskPriority.MEDIUM -> TertiaryColor
+                                    else -> OnSurfaceVariant
+                                },
+                                isHighPriority = false,
                                 onToggle = { taskViewModel.toggleComplete(task) },
                                 onDelete = { taskToDelete = task },
                                 onEdit = {
@@ -211,8 +230,9 @@ fun TaskListScreen(
                                     selectedNoteId = task.noteId
                                     showDialog = true
                                 },
-                                onNoteClick = { task.noteId?.let { nid -> onNavigateToNote(nid) } },
-                                isHighPriority = false
+                                onNoteClick = {
+                                    task.noteId?.let { nid -> onNavigateToNote(nid) }
+                                }
                             )
                         }
                     }
@@ -234,10 +254,8 @@ fun TaskListScreen(
                 }
                 1 -> {
                     item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(64.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(64.dp),
+                            contentAlignment = Alignment.Center) {
                             Text("لا توجد مهام قادمة", color = OnSurfaceVariant)
                         }
                     }
@@ -245,10 +263,8 @@ fun TaskListScreen(
                 2 -> {
                     if (completedTasks.isEmpty()) {
                         item {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(64.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(64.dp),
+                                contentAlignment = Alignment.Center) {
                                 Text("لا توجد مهام مكتملة", color = OnSurfaceVariant)
                             }
                         }
@@ -257,11 +273,15 @@ fun TaskListScreen(
                             TaskCard(
                                 task = task,
                                 linkedNoteName = notes.find { it.id == task.noteId }?.title,
+                                badge = null,
+                                badgeColor = Color.Transparent,
+                                isHighPriority = false,
                                 onToggle = { taskViewModel.toggleComplete(task) },
                                 onDelete = { taskToDelete = task },
                                 onEdit = {},
-                                onNoteClick = { task.noteId?.let { nid -> onNavigateToNote(nid) } },
-                                isHighPriority = false
+                                onNoteClick = {
+                                    task.noteId?.let { nid -> onNavigateToNote(nid) }
+                                }
                             )
                         }
                     }
@@ -278,9 +298,7 @@ fun TaskListScreen(
                 .clip(RoundedCornerShape(16.dp))
                 .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
                 .clickable {
-                    editingTask = null
-                    newTitle = ""
-                    selectedNoteId = null
+                    editingTask = null; newTitle = ""; selectedNoteId = null
                     showDialog = true
                 },
             contentAlignment = Alignment.Center
@@ -290,12 +308,18 @@ fun TaskListScreen(
         }
     }
 
-    // Dialog إضافة/تعديل
+    // Add/Edit Dialog
     if (showDialog) {
         AlertDialog(
-            onDismissRequest = { showDialog = false; newTitle = ""; selectedNoteId = null; editingTask = null },
+            onDismissRequest = {
+                showDialog = false; newTitle = ""
+                selectedNoteId = null; editingTask = null
+            },
             containerColor = SurfaceColor,
-            title = { Text(if (editingTask != null) "تعديل المهمة" else "مهمة جديدة", color = Color.White) },
+            title = {
+                Text(if (editingTask != null) "تعديل المهمة" else "مهمة جديدة",
+                    color = Color.White)
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
@@ -361,7 +385,8 @@ fun TaskListScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(note.title,
-                                color = if (selectedNoteId == note.id) PrimaryColor else Color.White)
+                                color = if (selectedNoteId == note.id) PrimaryColor
+                                    else Color.White)
                         }
                     }
                 }
@@ -376,8 +401,10 @@ fun TaskListScreen(
             onDismissRequest = { taskToDelete = null },
             containerColor = SurfaceColor,
             title = { Text("حذف المهمة", color = Color.White) },
-            text = { Text("متأكد إنك عايز تحذف \"${taskToDelete!!.title}\"؟",
-                color = OnSurfaceVariant) },
+            text = {
+                Text("متأكد إنك عايز تحذف \"${taskToDelete!!.title}\"؟",
+                    color = OnSurfaceVariant)
+            },
             confirmButton = {
                 TextButton(onClick = {
                     taskViewModel.deleteTask(taskToDelete!!)
@@ -397,30 +424,40 @@ fun TaskListScreen(
 fun TaskCard(
     task: Task,
     linkedNoteName: String?,
+    badge: String?,
+    badgeColor: Color,
+    isHighPriority: Boolean,
     onToggle: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
-    onNoteClick: () -> Unit,
-    isHighPriority: Boolean
+    onNoteClick: () -> Unit
 ) {
-    val borderColor = if (isHighPriority) Color(0xFFFF6B6B) else Color.Transparent
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1C1B1B))
+            .background(SurfaceColor)
             .then(
                 if (isHighPriority) Modifier.border(
-                    width = 1.dp,
-                    color = borderColor.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp)
+                    1.dp, HighPriorityColor.copy(alpha = 0.4f), RoundedCornerShape(12.dp)
                 ) else Modifier
             )
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Left border for high priority
+        if (isHighPriority) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(HighPriorityColor)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+
         // Checkbox
         Box(
             modifier = Modifier
@@ -428,9 +465,8 @@ fun TaskCard(
                 .clip(CircleShape)
                 .background(
                     if (task.isCompleted)
-                        Brush.linearGradient(listOf(Color(0xFFCABEFF), Color(0xFF8A70FF)))
-                    else
-                        Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                        Brush.linearGradient(listOf(PrimaryColor, AccentColor))
+                    else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
                 )
                 .border(
                     1.5.dp,
@@ -453,6 +489,7 @@ fun TaskCard(
                 text = task.title,
                 color = if (task.isCompleted) Color(0xFF929097) else Color.White,
                 fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
                 textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
             )
             if (linkedNoteName != null) {
@@ -462,14 +499,29 @@ fun TaskCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(Icons.Default.Link, contentDescription = null,
-                        tint = Color(0xFF75D1FF), modifier = Modifier.size(12.dp))
-                    Text(linkedNoteName, fontSize = 11.sp, color = Color(0xFF75D1FF))
+                        tint = TertiaryColor, modifier = Modifier.size(12.dp))
+                    Text(linkedNoteName, fontSize = 11.sp, color = TertiaryColor)
                 }
             }
             if (task.pomodoroCount > 0) {
-                Text("🍅 ${task.pomodoroCount}",
-                    fontSize = 11.sp, color = Color(0xFF929097))
+                Text("🍅 ${task.pomodoroCount}", fontSize = 11.sp,
+                    color = Color(0xFF929097))
             }
+        }
+
+        // Badge
+        if (badge != null) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(badgeColor.copy(alpha = 0.15f))
+                    .border(1.dp, badgeColor.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(badge, fontSize = 10.sp,
+                    color = badgeColor, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.width(4.dp))
         }
 
         if (!task.isCompleted) {
@@ -480,7 +532,8 @@ fun TaskCard(
         }
         IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
             Icon(Icons.Default.Delete, contentDescription = null,
-                tint = Color(0xFFFF6B6B).copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+                tint = HighPriorityColor.copy(alpha = 0.7f),
+                modifier = Modifier.size(16.dp))
         }
     }
 }
