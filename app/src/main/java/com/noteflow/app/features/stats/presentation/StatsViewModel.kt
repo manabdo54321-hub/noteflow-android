@@ -1,6 +1,7 @@
 package com.noteflow.app.features.stats.presentation
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.noteflow.app.features.tasks.data.repository.TaskRepository
 import com.noteflow.app.features.tasks.domain.model.Task
 import dagger.hilt.android.lifecycle.HiltViewModel
