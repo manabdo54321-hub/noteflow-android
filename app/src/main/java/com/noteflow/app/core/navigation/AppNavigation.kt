@@ -86,7 +86,7 @@ fun AppNavigation() {
                 )
             }
             composable("tasks") {
-                TaskListScreen()
+                TaskListScreen(onNavigateToNote = { id -> navController.navigate("note/$id") })
             }
             composable("timer") {
                 TimerScreen()
