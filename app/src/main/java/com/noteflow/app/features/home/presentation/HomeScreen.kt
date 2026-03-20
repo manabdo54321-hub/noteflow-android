@@ -52,6 +52,7 @@ fun HomeScreen(
     onNavigateToNotes: () -> Unit,
     onNavigateToStats: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToSearch: () -> Unit,
     noteViewModel: NoteViewModel = hiltViewModel(),
     statsViewModel: StatsViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel(),
