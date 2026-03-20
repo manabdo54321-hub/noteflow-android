@@ -55,13 +55,13 @@ fun TaskListScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(tasks, key = { it.id }) { task ->
+                items(tasks, key = { task -> task.id }) { task ->
                     TaskItem(
                         task = task,
-                        linkedNoteName = notes.find { it.id == task.noteId }?.title,
+                        linkedNoteName = notes.find { note -> note.id == task.noteId }?.title,
                         onToggle = { taskViewModel.toggleComplete(task) },
                         onDelete = { taskViewModel.deleteTask(task) },
-                        onNoteClick = { task.noteId?.let { onNavigateToNote(it) } }
+                        onNoteClick = { task.noteId?.let { nid -> onNavigateToNote(nid) } }
                     )
                 }
             }
@@ -81,7 +81,7 @@ fun TaskListScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    val linkedNote = notes.find { it.id == selectedNoteId }
+                    val linkedNote = notes.find { note -> note.id == selectedNoteId }
                     OutlinedButton(
                         onClick = { showNotePicker = true },
                         modifier = Modifier.fillMaxWidth()
@@ -101,9 +101,11 @@ fun TaskListScreen(
                 }) { Text("حفظ") }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false; newTitle = ""; selectedNoteId = null }) {
-                    Text("إلغاء")
-                }
+                TextButton(onClick = {
+                    showDialog = false
+                    newTitle = ""
+                    selectedNoteId = null
+                }) { Text("إلغاء") }
             }
         )
     }
