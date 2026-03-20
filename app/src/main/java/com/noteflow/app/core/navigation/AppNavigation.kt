@@ -35,7 +35,10 @@ sealed class BottomNavItem(val route: String, val label: String, val icon: Image
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    isFirstTime: Boolean = false,
+    onOnboardingFinished: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val bottomItems = listOf(
         BottomNavItem.Notes,
@@ -72,12 +75,13 @@ fun AppNavigation() {
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = "intro",
+            startDestination = if (isFirstTime) "intro" else "notes",
             modifier = Modifier.padding(padding)
         ) {
             composable("intro") {
                 IntroScreen(
                     onFinished = {
+                        onOnboardingFinished()
                         navController.navigate("notes") {
                             popUpTo("intro") { inclusive = true }
                         }
