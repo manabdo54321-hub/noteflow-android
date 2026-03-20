@@ -3,10 +3,11 @@
     <application
         android:name=".NoteFlowApp"
         android:label="NoteFlow"
-        android:theme="@android:style/Theme.Light">
+        android:theme="@style/Theme.NoteFlow.SplashScreen">
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.NoteFlow.SplashScreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
