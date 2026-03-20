@@ -120,7 +120,7 @@ fun AppNavigation(
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = "intro",
+            startDestination = if (isFirstTime) "intro" else "home",
             modifier = Modifier.padding(padding)
         ) {
             composable("intro") {
