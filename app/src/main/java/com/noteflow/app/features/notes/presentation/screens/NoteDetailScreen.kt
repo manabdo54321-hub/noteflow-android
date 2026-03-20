@@ -33,6 +33,10 @@ fun NoteDetailScreen(
     var content by remember(existing) { mutableStateOf(existing?.content ?: "") }
 
     val error by viewModel.error.collectAsState()
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val errorColor = MaterialTheme.colorScheme.error
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     LaunchedEffect(error) {
         if (error != null) viewModel.clearError()
@@ -44,8 +48,7 @@ fun NoteDetailScreen(
         }
     }
 
-    // بناء النص مع الـ [[links]] قابلة للضغط
-    val annotatedContent = remember(content, notes) {
+    val annotatedContent = remember(content, notes, primaryColor, errorColor) {
         buildAnnotatedString {
             val regex = Regex("""\[\[(.+?)]]""")
             var lastIndex = 0
@@ -55,12 +58,12 @@ fun NoteDetailScreen(
                 val linkedNote = notes.find { it.title == linkTitle }
                 if (linkedNote != null) {
                     pushStringAnnotation("NOTE_LINK", linkedNote.id.toString())
-                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                    withStyle(SpanStyle(color = primaryColor)) {
                         append("[[${linkTitle}]]")
                     }
                     pop()
                 } else {
-                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.error)) {
+                    withStyle(SpanStyle(color = errorColor)) {
                         append("[[${linkTitle}]]")
                     }
                 }
@@ -119,19 +122,18 @@ fun NoteDetailScreen(
                 )
             }
 
-            // عرض النص مع الـ links قابلة للضغط
             if (noteId != 0L && content.contains("[[")) {
                 item {
                     Text(
                         text = "معاينة الروابط",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = onSurfaceVariantColor
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     ClickableText(
                         text = annotatedContent,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = onSurfaceColor
                         ),
                         onClick = { offset ->
                             annotatedContent.getStringAnnotations("NOTE_LINK", offset, offset)
@@ -143,15 +145,14 @@ fun NoteDetailScreen(
                 }
             }
 
-            // قائمة الـ Backlinks
             if (backlinks.isNotEmpty()) {
                 item {
-                    HorizontalDivider()
+                    Divider()
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "الملاحظات اللي بتلينك هنا (${backlinks.size})",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = primaryColor
                     )
                 }
                 items(backlinks) { note ->
@@ -168,7 +169,7 @@ fun NoteDetailScreen(
                                 Text(
                                     text = note.content.take(80) + if (note.content.length > 80) "..." else "",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = onSurfaceVariantColor
                                 )
                             }
                         }
@@ -178,7 +179,7 @@ fun NoteDetailScreen(
 
             if (error != null) {
                 item {
-                    Text(error!!, color = MaterialTheme.colorScheme.error)
+                    Text(error!!, color = errorColor)
                 }
             }
         }

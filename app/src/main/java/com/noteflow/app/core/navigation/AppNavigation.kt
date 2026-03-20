@@ -79,7 +79,10 @@ fun AppNavigation() {
                 val id = backStack.arguments?.getLong("noteId") ?: 0L
                 NoteDetailScreen(
                     noteId = id,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onNavigateToNote = { targetId ->
+                        navController.navigate("note/$targetId")
+                    }
                 )
             }
             composable("tasks") {
