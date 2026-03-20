@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,13 +21,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.noteflow.app.features.notes.domain.model.Note
 import com.noteflow.app.features.notes.presentation.NoteViewModel
 import com.noteflow.app.features.stats.presentation.StatsViewModel
 import com.noteflow.app.features.tasks.domain.model.Task
@@ -54,6 +52,9 @@ fun HomeScreen(
     onAddNote: () -> Unit,
     onNavigateToTimer: () -> Unit,
     onNavigateToTasks: () -> Unit,
+    onNavigateToNotes: () -> Unit,
+    onNavigateToStats: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     noteViewModel: NoteViewModel = hiltViewModel(),
     statsViewModel: StatsViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel(),
@@ -69,6 +70,8 @@ fun HomeScreen(
 
     var quickNote by remember { mutableStateOf("") }
     var isWriting by remember { mutableStateOf(false) }
+    var showLeftDrawer by remember { mutableStateOf(false) }
+    var showRightDrawer by remember { mutableStateOf(false) }
 
     val activeTasks = tasks.filter { !it.isCompleted }
     val completedTasks = tasks.filter { it.isCompleted }
@@ -89,7 +92,6 @@ fun HomeScreen(
         else -> "مساء الخير"
     }
 
-    // Auto-save quick note
     LaunchedEffect(quickNote) {
         if (quickNote.isNotBlank()) {
             kotlinx.coroutines.delay(2000)
@@ -97,11 +99,9 @@ fun HomeScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BgColor)
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(BgColor)) {
+
+        // المحتوى الرئيسي
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -117,8 +117,9 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // الصورة الشخصية + الاسم
+                // الصورة الشخصية + الاسم → يفتح الـ Right Drawer
                 Row(
+                    modifier = Modifier.clickable { showRightDrawer = true },
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -128,39 +129,32 @@ fun HomeScreen(
                             .clip(CircleShape)
                             .background(
                                 Brush.linearGradient(listOf(PrimaryColor, AccentColor))
-                            )
-                            .clickable { },
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Text("م", fontSize = 14.sp,
                             fontWeight = FontWeight.Bold, color = Color(0xFF1C0062))
                     }
                     Column {
-                        Text("مرحباً بعودتك",
-                            fontSize = 10.sp,
-                            letterSpacing = 2.sp,
-                            color = OnSurface.copy(alpha = 0.6f)
-                        )
-                        Text(
-                            text = greeting,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryColor
-                        )
+                        Text("مرحباً بعودتك", fontSize = 10.sp,
+                            letterSpacing = 2.sp, color = OnSurface.copy(alpha = 0.6f))
+                        Text(greeting, fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold, color = PrimaryColor)
                     }
                 }
 
                 // الأزرار العلوية
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { }) {
+                    IconButton(onClick = { onNavigateToStats() }) {
                         Icon(Icons.Default.Insights, contentDescription = null,
                             tint = OnSurface.copy(alpha = 0.6f))
                     }
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.CenterFocusWeak, contentDescription = null,
+                    // 3 شرطات → يفتح الـ Left Drawer
+                    IconButton(onClick = { showLeftDrawer = true }) {
+                        Icon(Icons.Default.Menu, contentDescription = null,
                             tint = OnSurface.copy(alpha = 0.6f))
                     }
                 }
@@ -179,66 +173,42 @@ fun HomeScreen(
                         .defaultMinSize(minHeight = 200.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(SurfaceLowest)
+                        .clickable { isWriting = true }
                         .padding(24.dp)
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        if (!isWriting && quickNote.isEmpty()) {
-                            Text(
-                                text = "ابدأ الكتابة...",
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = OnSurface,
-                                modifier = Modifier.clickable { isWriting = true }
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "أفكارك تنتظر...",
-                                fontSize = 16.sp,
+                        Text("ابدأ الكتابة...", fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold, color = OnSurface)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        BasicTextField(
+                            value = quickNote,
+                            onValueChange = { quickNote = it; isWriting = true },
+                            textStyle = TextStyle(
                                 color = OnSurfaceVariant,
-                                modifier = Modifier.clickable { isWriting = true }
-                            )
-                        } else {
-                            Text(
-                                text = "ابدأ الكتابة...",
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = OnSurface
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            BasicTextField(
-                                value = quickNote,
-                                onValueChange = { quickNote = it; isWriting = true },
-                                textStyle = TextStyle(
-                                    color = OnSurfaceVariant,
-                                    fontSize = 16.sp,
-                                    lineHeight = 26.sp
-                                ),
-                                cursorBrush = SolidColor(PrimaryColor),
-                                modifier = Modifier.fillMaxWidth(),
-                                decorationBox = { inner ->
-                                    if (quickNote.isEmpty()) {
-                                        Text("أفكارك تنتظر...",
-                                            color = OnSurfaceVariant, fontSize = 16.sp)
-                                    }
-                                    inner()
+                                fontSize = 16.sp,
+                                lineHeight = 26.sp
+                            ),
+                            cursorBrush = SolidColor(PrimaryColor),
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { inner ->
+                                if (quickNote.isEmpty()) {
+                                    Text("فكّر في مشروعك القادم...",
+                                        color = OnSurfaceVariant.copy(alpha = 0.5f),
+                                        fontSize = 16.sp)
                                 }
-                            )
-                        }
+                                inner()
+                            }
+                        )
                     }
-
-                    // Auto-saving indicator
                     if (quickNote.isNotBlank()) {
-                        Text(
-                            text = "يحفظ تلقائياً...",
-                            fontSize = 10.sp,
+                        Text("يحفظ تلقائياً...", fontSize = 10.sp,
                             letterSpacing = 1.sp,
                             color = OnSurfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.align(Alignment.TopEnd)
-                        )
+                            modifier = Modifier.align(Alignment.TopEnd))
                     }
                 }
 
-                // Today's Tasks + Focus Timer
+                // Tasks + Timer
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -260,48 +230,37 @@ fun HomeScreen(
                             Text("اليوم", fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold, color = OnSurface)
                             Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = "${completedTasks.size} من ${totalTasks} مكتملة",
-                                    fontSize = 10.sp,
-                                    color = PrimaryColor,
-                                    letterSpacing = 1.sp
-                                )
+                                Text("${completedTasks.size} من $totalTasks",
+                                    fontSize = 10.sp, color = PrimaryColor,
+                                    letterSpacing = 1.sp)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Box(
                                     modifier = Modifier
-                                        .width(48.dp)
-                                        .height(4.dp)
+                                        .width(48.dp).height(4.dp)
                                         .clip(RoundedCornerShape(2.dp))
                                         .background(SurfaceHigh)
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxWidth(completionRate)
-                                            .height(4.dp)
+                                            .fillMaxWidth(completionRate).height(4.dp)
                                             .clip(RoundedCornerShape(2.dp))
-                                            .background(
-                                                Brush.horizontalGradient(
-                                                    listOf(PrimaryColor, AccentColor)
-                                                )
-                                            )
+                                            .background(Brush.horizontalGradient(
+                                                listOf(PrimaryColor, AccentColor)))
                                     )
                                 }
                             }
                         }
 
-                        // Tasks List
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            val displayTasks = (activeTasks.take(2) + completedTasks.take(2))
-                                .take(4)
-                            displayTasks.forEach { task ->
-                                TaskRow(
-                                    task = task,
-                                    onToggle = { taskViewModel.toggleComplete(task) }
-                                )
-                            }
+                            val displayTasks = (activeTasks.take(2) + completedTasks.take(2)).take(4)
                             if (displayTasks.isEmpty()) {
-                                Text("لا توجد مهام اليوم ✨",
+                                Text("لا توجد مهام ✨",
                                     color = OnSurfaceVariant, fontSize = 13.sp)
+                            } else {
+                                displayTasks.forEach { task ->
+                                    TaskRow(task = task,
+                                        onToggle = { taskViewModel.toggleComplete(task) })
+                                }
                             }
                         }
                     }
@@ -317,73 +276,46 @@ fun HomeScreen(
                     ) {
                         Text("تايمر التركيز", fontSize = 16.sp,
                             fontWeight = FontWeight.Bold, color = OnSurface)
-                        Text(
-                            text = "جلسة بومودورو: ${"%02d:%02d".format(timerMinutes, timerSeconds)}",
-                            fontSize = 11.sp, color = OutlineVariant
-                        )
+                        Text("جلسة: %02d:%02d".format(timerMinutes, timerSeconds),
+                            fontSize = 11.sp, color = OutlineVariant)
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                        // Timer Circle
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f),
+                            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Background glow
                             Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .blur(40.dp)
+                                modifier = Modifier.size(80.dp).blur(40.dp)
                                     .background(TertiaryColor.copy(alpha = 0.1f), CircleShape)
                             )
-
-                            androidx.compose.foundation.Canvas(
-                                modifier = Modifier.size(96.dp)
-                            ) {
+                            androidx.compose.foundation.Canvas(modifier = Modifier.size(96.dp)) {
                                 val strokeWidth = 4.dp.toPx()
                                 val radius = size.minDimension / 2 - strokeWidth
-
                                 drawArc(
-                                    color = SurfaceHigh,
-                                    startAngle = -90f,
-                                    sweepAngle = 360f,
+                                    color = SurfaceHigh, startAngle = -90f, sweepAngle = 360f,
                                     useCenter = false,
                                     style = androidx.compose.ui.graphics.drawscope.Stroke(
                                         width = strokeWidth,
-                                        cap = androidx.compose.ui.graphics.StrokeCap.Round
-                                    ),
-                                    topLeft = androidx.compose.ui.geometry.Offset(
-                                        strokeWidth, strokeWidth),
-                                    size = androidx.compose.ui.geometry.Size(
-                                        radius * 2, radius * 2)
+                                        cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                                    topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth),
+                                    size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
                                 )
                                 drawArc(
-                                    color = TertiaryColor,
-                                    startAngle = -90f,
+                                    color = TertiaryColor, startAngle = -90f,
                                     sweepAngle = 360f * timerProgress,
                                     useCenter = false,
                                     style = androidx.compose.ui.graphics.drawscope.Stroke(
                                         width = strokeWidth,
-                                        cap = androidx.compose.ui.graphics.StrokeCap.Round
-                                    ),
-                                    topLeft = androidx.compose.ui.geometry.Offset(
-                                        strokeWidth, strokeWidth),
-                                    size = androidx.compose.ui.geometry.Size(
-                                        radius * 2, radius * 2)
+                                        cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                                    topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth),
+                                    size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
                                 )
                             }
-
-                            Text(
-                                text = "%02d:%02d".format(timerMinutes, timerSeconds),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = OnSurface
-                            )
+                            Text("%02d:%02d".format(timerMinutes, timerSeconds),
+                                fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnSurface)
                         }
 
-                        // Start Button
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
@@ -399,82 +331,60 @@ fun HomeScreen(
                             Icon(
                                 if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                tint = TertiaryColor,
-                                modifier = Modifier.size(16.dp)
+                                tint = TertiaryColor, modifier = Modifier.size(16.dp)
                             )
-                            Text(
-                                if (isRunning) "إيقاف" else "ابدأ",
-                                fontSize = 11.sp,
-                                letterSpacing = 1.sp,
-                                color = TertiaryColor
-                            )
+                            Text(if (isRunning) "إيقاف" else "ابدأ",
+                                fontSize = 11.sp, letterSpacing = 1.sp, color = TertiaryColor)
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(100.dp))
+            Spacer(modifier = Modifier.height(120.dp))
         }
 
         // Bottom Navigation — Floating
         Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp)
         ) {
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50.dp))
-                    .background(Color(0xFF201F1F).copy(alpha = 0.9f))
+                    .background(Color(0xFF201F1F).copy(alpha = 0.95f))
                     .padding(horizontal = 24.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // القلم البنفسجي — Active
+                // القلم — Active
                 Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(listOf(PrimaryColor, AccentColor))
-                        )
+                    modifier = Modifier.size(48.dp).clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
                         .clickable { onAddNote() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.EditNote, contentDescription = null,
                         tint = Color(0xFF131313), modifier = Modifier.size(24.dp))
                 }
-
                 // البرق
                 Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
+                    modifier = Modifier.size(48.dp).clip(CircleShape)
                         .clickable { onNavigateToTasks() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Bolt, contentDescription = null,
                         tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
                 }
-
                 // العدسة
                 Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .clickable { },
+                    modifier = Modifier.size(48.dp).clip(CircleShape).clickable { },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Search, contentDescription = null,
                         tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
                 }
-
                 // الترس
                 Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .clickable { },
+                    modifier = Modifier.size(48.dp).clip(CircleShape)
+                        .clickable { onNavigateToSettings() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Settings, contentDescription = null,
@@ -482,6 +392,140 @@ fun HomeScreen(
                 }
             }
         }
+
+        // Left Drawer — الأدوات والإضافات
+        if (showLeftDrawer) {
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable { showLeftDrawer = false }
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(280.dp)
+                    .align(Alignment.CenterStart)
+                    .background(Color(0xFF1C1B1B))
+                    .padding(24.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("الأدوات", fontSize = 11.sp,
+                        letterSpacing = 2.sp, color = PrimaryColor,
+                        fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    DrawerItem(Icons.Default.Home, "الرئيسية") {
+                        showLeftDrawer = false
+                    }
+                    DrawerItem(Icons.Default.Notes, "الملاحظات") {
+                        showLeftDrawer = false; onNavigateToNotes()
+                    }
+                    DrawerItem(Icons.Default.CheckCircle, "المهام") {
+                        showLeftDrawer = false; onNavigateToTasks()
+                    }
+                    DrawerItem(Icons.Default.Timer, "التايمر") {
+                        showLeftDrawer = false; onNavigateToTimer()
+                    }
+                    DrawerItem(Icons.Default.BarChart, "الإحصائيات") {
+                        showLeftDrawer = false; onNavigateToStats()
+                    }
+
+                    Divider(color = OutlineVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.padding(vertical = 8.dp))
+
+                    Text("إضافات", fontSize = 11.sp,
+                        letterSpacing = 2.sp, color = PrimaryColor,
+                        fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    DrawerItem(Icons.Default.AccountTree, "خريطة الروابط") { showLeftDrawer = false }
+                    DrawerItem(Icons.Default.Tag, "الوسوم") { showLeftDrawer = false }
+                    DrawerItem(Icons.Default.Archive, "الأرشيف") { showLeftDrawer = false }
+                    DrawerItem(Icons.Default.FileDownload, "تصدير") { showLeftDrawer = false }
+                }
+            }
+        }
+
+        // Right Drawer — الإعدادات الشخصية
+        if (showRightDrawer) {
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable { showRightDrawer = false }
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(280.dp)
+                    .align(Alignment.CenterEnd)
+                    .background(Color(0xFF1C1B1B))
+                    .padding(24.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Profile
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier.size(48.dp).clip(CircleShape)
+                                .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("م", fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold, color = Color(0xFF1C0062))
+                        }
+                        Column {
+                            Text("مستخدم NoteFlow",
+                                fontWeight = FontWeight.Bold, color = OnSurface)
+                            Text("noteflow@app.io", fontSize = 12.sp, color = OnSurfaceVariant)
+                        }
+                    }
+
+                    Divider(color = OutlineVariant.copy(alpha = 0.3f))
+
+                    Text("الإعدادات", fontSize = 11.sp,
+                        letterSpacing = 2.sp, color = PrimaryColor,
+                        fontWeight = FontWeight.Bold)
+
+                    DrawerItem(Icons.Default.Settings, "إعدادات التطبيق") {
+                        showRightDrawer = false; onNavigateToSettings()
+                    }
+                    DrawerItem(Icons.Default.Palette, "المظهر والألوان") { showRightDrawer = false }
+                    DrawerItem(Icons.Default.Notifications, "الإشعارات") { showRightDrawer = false }
+                    DrawerItem(Icons.Default.Security, "الأمان") { showRightDrawer = false }
+                    DrawerItem(Icons.Default.Sync, "المزامنة") { showRightDrawer = false }
+
+                    Divider(color = OutlineVariant.copy(alpha = 0.3f))
+
+                    DrawerItem(Icons.Default.Logout, "تسجيل الخروج",
+                        tint = Color(0xFFFF6B6B)) { showRightDrawer = false }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DrawerItem(
+    icon: ImageVector,
+    label: String,
+    tint: Color = OnSurfaceVariant,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null,
+            tint = tint, modifier = Modifier.size(20.dp))
+        Text(label, color = if (tint == OnSurfaceVariant) OnSurface else tint,
+            fontSize = 15.sp)
     }
 }
 
@@ -496,14 +540,10 @@ private fun TaskRow(task: Task, onToggle: () -> Unit) {
             modifier = Modifier
                 .size(20.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(
-                    if (task.isCompleted) PrimaryColor else Color.Transparent
-                )
-                .border(
-                    1.dp,
+                .background(if (task.isCompleted) PrimaryColor else Color.Transparent)
+                .border(1.dp,
                     if (task.isCompleted) Color.Transparent else OutlineVariant,
-                    RoundedCornerShape(4.dp)
-                )
+                    RoundedCornerShape(4.dp))
                 .clickable { onToggle() },
             contentAlignment = Alignment.Center
         ) {
