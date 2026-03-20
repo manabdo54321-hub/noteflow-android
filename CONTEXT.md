@@ -105,3 +105,4 @@
 - app/src/main/res/values/themes.xml
 - app/src/main/res/drawable/ic_splash.xml
 - app/src/main/java/com/noteflow/app/features/intro/presentation/IntroScreen.kt
+- app/src/main/java/com/noteflow/app/features/intro/presentation/OnboardingScreen.kt
