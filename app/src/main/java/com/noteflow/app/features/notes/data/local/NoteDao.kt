@@ -20,4 +20,7 @@ interface NoteDao {
 
     @Delete
     suspend fun deleteNote(note: NoteEntity)
+
+    @Query("SELECT * FROM notes WHERE content LIKE '%[[' || :noteTitle || ']]%' AND id != :noteId")
+    fun getBacklinks(noteTitle: String, noteId: Long): Flow<List<NoteEntity>>
 }
