@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +20,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteListScreen
+import com.noteflow.app.features.settings.presentation.screens.SettingsScreen
 import com.noteflow.app.features.stats.presentation.screens.StatsScreen
 import com.noteflow.app.features.tasks.presentation.screens.TaskListScreen
 import com.noteflow.app.features.timer.presentation.screens.TimerScreen
@@ -28,6 +30,7 @@ sealed class BottomNavItem(val route: String, val label: String, val icon: Image
     object Tasks : BottomNavItem("tasks", "مهام", Icons.Default.CheckCircle)
     object Timer : BottomNavItem("timer", "تايمر", Icons.Default.Timer)
     object Stats : BottomNavItem("stats", "إحصائيات", Icons.Default.BarChart)
+    object Settings : BottomNavItem("settings", "إعدادات", Icons.Default.Settings)
 }
 
 @Composable
@@ -37,7 +40,8 @@ fun AppNavigation() {
         BottomNavItem.Notes,
         BottomNavItem.Tasks,
         BottomNavItem.Timer,
-        BottomNavItem.Stats
+        BottomNavItem.Stats,
+        BottomNavItem.Settings
     )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -99,6 +103,9 @@ fun AppNavigation() {
             }
             composable("stats") {
                 StatsScreen()
+            }
+            composable("settings") {
+                SettingsScreen()
             }
         }
     }
