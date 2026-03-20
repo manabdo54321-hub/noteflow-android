@@ -432,7 +432,7 @@ fun HomeScreen(
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
-                        .clickable { },
+                        .clickable { onNavigateToSearch() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Search, contentDescription = null,
