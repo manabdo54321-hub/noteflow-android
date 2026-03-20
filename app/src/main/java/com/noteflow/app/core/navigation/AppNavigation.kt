@@ -2,6 +2,7 @@ package com.noteflow.app.core.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Timer
@@ -18,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteListScreen
+import com.noteflow.app.features.stats.presentation.screens.StatsScreen
 import com.noteflow.app.features.tasks.presentation.screens.TaskListScreen
 import com.noteflow.app.features.timer.presentation.screens.TimerScreen
 
@@ -25,6 +27,7 @@ sealed class BottomNavItem(val route: String, val label: String, val icon: Image
     object Notes : BottomNavItem("notes", "ملاحظات", Icons.Default.Home)
     object Tasks : BottomNavItem("tasks", "مهام", Icons.Default.CheckCircle)
     object Timer : BottomNavItem("timer", "تايمر", Icons.Default.Timer)
+    object Stats : BottomNavItem("stats", "إحصائيات", Icons.Default.BarChart)
 }
 
 @Composable
@@ -33,7 +36,8 @@ fun AppNavigation() {
     val bottomItems = listOf(
         BottomNavItem.Notes,
         BottomNavItem.Tasks,
-        BottomNavItem.Timer
+        BottomNavItem.Timer,
+        BottomNavItem.Stats
     )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -86,10 +90,15 @@ fun AppNavigation() {
                 )
             }
             composable("tasks") {
-                TaskListScreen(onNavigateToNote = { id -> navController.navigate("note/$id") })
+                TaskListScreen(
+                    onNavigateToNote = { id -> navController.navigate("note/$id") }
+                )
             }
             composable("timer") {
                 TimerScreen()
+            }
+            composable("stats") {
+                StatsScreen()
             }
         }
     }
