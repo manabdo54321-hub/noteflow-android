@@ -3,7 +3,7 @@ package com.noteflow.app.core.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -22,7 +22,7 @@ import com.noteflow.app.features.timer.presentation.screens.TimerScreen
 sealed class BottomNavItem(val route: String, val label: String, val icon: ImageVector) {
     object Notes : BottomNavItem("notes", "ملاحظات", Icons.Default.Home)
     object Tasks : BottomNavItem("tasks", "مهام", Icons.Default.CheckCircle)
-    object Timer : BottomNavItem("timer", "تايمر", Icons.Default.DateRange)
+    object Timer : BottomNavItem("timer", "تايمر", Icons.Default.Timer)
 }
 
 @Composable
