@@ -1,48 +1,107 @@
 package com.noteflow.app.features.notes.presentation.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.noteflow.app.features.notes.presentation.NoteViewModel
 
-// VisualTransformation تلوّن [[...]] أثناء الكتابة
-class LinkVisualTransformation(
-    private val linkColor: androidx.compose.ui.graphics.Color
+private val BgColor = Color(0xFF131313)
+private val SurfaceColor = Color(0xFF1C1B1B)
+private val SurfaceHigh = Color(0xFF2A2A2A)
+private val PrimaryColor = Color(0xFFCABEFF)
+private val AccentColor = Color(0xFF8A70FF)
+private val OnSurfaceVariant = Color(0xFFC8C5CD)
+private val OutlineVariant = Color(0xFF47464C)
+private val ErrorColor = Color(0xFFFF6B6B)
+
+class MarkdownVisualTransformation(
+    private val primaryColor: Color,
+    private val onSurface: Color
 ) : VisualTransformation {
     override fun filter(text: androidx.compose.ui.text.AnnotatedString): TransformedText {
         val annotated = buildAnnotatedString {
-            val regex = Regex("""\[\[(.+?)]]""")
-            var lastIndex = 0
-            regex.findAll(text.text).forEach { match ->
-                append(text.text.substring(lastIndex, match.range.first))
-                withStyle(SpanStyle(color = linkColor, fontWeight = FontWeight.Bold)) {
-                    append(match.value)
+            val lines = text.text.split("\n")
+            lines.forEachIndexed { lineIndex, line ->
+                when {
+                    // عناوين
+                    line.startsWith("# ") -> {
+                        withStyle(SpanStyle(color = primaryColor,
+                            fontSize = 22.sp, fontWeight = FontWeight.Bold)) {
+                            append(line)
+                        }
+                    }
+                    line.startsWith("## ") -> {
+                        withStyle(SpanStyle(color = primaryColor,
+                            fontSize = 18.sp, fontWeight = FontWeight.Bold)) {
+                            append(line)
+                        }
+                    }
+                    // Bullet points
+                    line.startsWith("- ") || line.startsWith("• ") -> {
+                        withStyle(SpanStyle(color = onSurface)) {
+                            append("• ${line.substring(2)}")
+                        }
+                    }
+                    // [[links]]
+                    line.contains("[[") -> {
+                        val regex = Regex("""\[\[(.+?)]]""")
+                        var lastIndex = 0
+                        regex.findAll(line).forEach { match ->
+                            append(line.substring(lastIndex, match.range.first))
+                            withStyle(SpanStyle(color = primaryColor,
+                                fontWeight = FontWeight.Bold)) {
+                                append(match.groupValues[1])
+                            }
+                            lastIndex = match.range.last + 1
+                        }
+                        if (lastIndex < line.length) append(line.substring(lastIndex))
+                    }
+                    // Bold **text**
+                    line.contains("**") -> {
+                        val parts = line.split("**")
+                        parts.forEachIndexed { i, part ->
+                            if (i % 2 == 1) {
+                                withStyle(SpanStyle(fontWeight = FontWeight.Bold,
+                                    color = onSurface)) { append(part) }
+                            } else {
+                                withStyle(SpanStyle(color = onSurface)) { append(part) }
+                            }
+                        }
+                    }
+                    else -> {
+                        withStyle(SpanStyle(color = onSurface)) { append(line) }
+                    }
                 }
-                lastIndex = match.range.last + 1
+                if (lineIndex < lines.size - 1) append("\n")
             }
-            if (lastIndex < text.text.length) append(text.text.substring(lastIndex))
         }
         return TransformedText(annotated, OffsetMapping.Identity)
     }
@@ -65,22 +124,16 @@ fun NoteDetailScreen(
     var isEditMode by remember { mutableStateOf(noteId == 0L) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val errorColor = MaterialTheme.colorScheme.error
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
-
     val error by viewModel.error.collectAsState()
 
+    // Auto-save
     LaunchedEffect(title, content) {
         if (title.isNotBlank()) {
             viewModel.triggerAutoSave(title, content, noteId)
         }
     }
 
-    LaunchedEffect(error) {
-        if (error != null) viewModel.clearError()
-    }
+    LaunchedEffect(error) { if (error != null) viewModel.clearError() }
 
     LaunchedEffect(noteId, title) {
         if (noteId != 0L && title.isNotBlank()) {
@@ -88,208 +141,412 @@ fun NoteDetailScreen(
         }
     }
 
-    // وضع القراءة — الأقواس بتختفي والكلمة بس بتبان كرابط
-    val readModeContent = remember(content, notes, primaryColor, errorColor) {
-        buildAnnotatedString {
-            val regex = Regex("""\[\[(.+?)]]""")
-            var lastIndex = 0
-            regex.findAll(content).forEach { match ->
-                append(content.substring(lastIndex, match.range.first))
-                val linkTitle = match.groupValues[1]
-                val linkedNote = notes.find { it.title == linkTitle }
-                if (linkedNote != null) {
-                    pushStringAnnotation("NOTE_LINK", linkedNote.id.toString())
-                    withStyle(SpanStyle(
-                        color = primaryColor,
-                        fontWeight = FontWeight.Bold
-                    )) {
-                        append(linkTitle) // الكلمة بس بدون [[]]
-                    }
-                    pop()
-                } else {
-                    withStyle(SpanStyle(
-                        color = errorColor,
-                        fontWeight = FontWeight.Bold
-                    )) {
-                        append(linkTitle) // الكلمة بس بدون [[]]
-                    }
-                }
-                lastIndex = match.range.last + 1
-            }
-            if (lastIndex < content.length) append(content.substring(lastIndex))
-        }
+    // Tags من المحتوى
+    val tags = remember(content) {
+        Regex("#(\\w+)").findAll(content).map { it.groupValues[1] }.toList()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    if (isEditMode) {
-                        BasicTextField(
-                            value = title,
-                            onValueChange = { title = it },
-                            textStyle = TextStyle(
-                                color = onSurfaceColor,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            cursorBrush = SolidColor(primaryColor),
-                            decorationBox = { inner ->
-                                if (title.isEmpty()) {
-                                    Text("العنوان", color = onSurfaceVariantColor)
-                                }
-                                inner()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BgColor)
+    ) {
+        // TopBar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp)
+                .statusBarsPadding(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = {
+                if (title.isNotBlank()) viewModel.saveNote(title, content, noteId)
+                onBack()
+            }) {
+                Icon(Icons.Default.ArrowBack, contentDescription = null,
+                    tint = OnSurfaceVariant)
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (noteId != 0L) {
+                    Text("آخر تعديل الآن", fontSize = 11.sp,
+                        color = OnSurfaceVariant.copy(alpha = 0.6f))
+                }
+
+                // Done / Edit button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            if (isEditMode)
+                                Brush.horizontalGradient(listOf(AccentColor, PrimaryColor))
+                            else
+                                Brush.horizontalGradient(listOf(SurfaceHigh, SurfaceHigh))
+                        )
+                        .clickable {
+                            if (isEditMode && title.isNotBlank()) {
+                                viewModel.saveNote(title, content, noteId)
                             }
-                        )
-                    } else {
-                        Text(title.ifBlank { "بدون عنوان" })
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        if (isEditMode && title.isNotBlank()) {
-                            viewModel.saveNote(title, content, noteId)
+                            isEditMode = !isEditMode
                         }
-                        onBack()
-                    }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "رجوع")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        if (isEditMode && title.isNotBlank()) {
-                            viewModel.saveNote(title, content, noteId)
-                        }
-                        isEditMode = !isEditMode
-                    }) {
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Icon(
-                            if (isEditMode) Icons.Default.MenuBook else Icons.Default.Edit,
-                            contentDescription = if (isEditMode) "وضع القراءة" else "وضع التعديل"
+                            if (isEditMode) Icons.Default.CloudDone else Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = if (isEditMode) Color(0xFF1C0062) else OnSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
                         )
-                    }
-                    if (noteId != 0L) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "حذف", tint = errorColor)
-                        }
+                        Text(
+                            if (isEditMode) "تم" else "تعديل",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isEditMode) Color(0xFF1C0062) else OnSurfaceVariant
+                        )
                     }
                 }
-            )
+
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = null,
+                        tint = OnSurfaceVariant)
+                }
+            }
         }
-    ) { padding ->
+
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .weight(1f)
+                .padding(horizontal = 16.dp)
         ) {
+            // العنوان
             item {
                 if (isEditMode) {
-                    // وضع التعديل — [[...]] بتتلون أثناء الكتابة
                     BasicTextField(
-                        value = content,
-                        onValueChange = { content = it },
+                        value = title,
+                        onValueChange = { title = it },
                         textStyle = TextStyle(
-                            color = onSurfaceColor,
-                            fontSize = 16.sp,
-                            lineHeight = 24.sp
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 40.sp
                         ),
-                        cursorBrush = SolidColor(primaryColor),
-                        visualTransformation = LinkVisualTransformation(primaryColor),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 300.dp),
+                        cursorBrush = SolidColor(PrimaryColor),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                         decorationBox = { inner ->
-                            if (content.isEmpty()) {
-                                Text("ابدأ الكتابة...", color = onSurfaceVariantColor)
+                            if (title.isEmpty()) {
+                                Text("العنوان", color = OnSurfaceVariant.copy(alpha = 0.5f),
+                                    fontSize = 32.sp, fontWeight = FontWeight.Bold)
                             }
                             inner()
                         }
                     )
                 } else {
-                    // وضع القراءة — الأقواس بتختفي والكلمة بس بتبان
-                    if (content.isBlank()) {
-                        Text(
-                            text = "لا يوجد محتوى",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = onSurfaceVariantColor
-                        )
-                    } else {
-                        ClickableText(
-                            text = readModeContent,
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                color = onSurfaceColor,
-                                lineHeight = 24.sp
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { offset ->
-                                readModeContent.getStringAnnotations("NOTE_LINK", offset, offset)
-                                    .firstOrNull()?.let { annotation ->
-                                        onNavigateToNote(annotation.item.toLong())
-                                    }
-                            }
-                        )
-                    }
+                    Text(
+                        text = title.ifBlank { "بدون عنوان" },
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
             }
 
-            // Backlinks
-            if (backlinks.isNotEmpty()) {
+            // Tags
+            if (tags.isNotEmpty()) {
                 item {
-                    Divider()
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "الملاحظات اللي بتلينك هنا (${backlinks.size})",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = primaryColor
-                    )
-                }
-                items(backlinks) { note ->
-                    OutlinedCard(
-                        onClick = { onNavigateToNote(note.id) },
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(note.title, style = MaterialTheme.typography.bodyMedium)
-                            if (note.content.isNotBlank()) {
-                                Text(
-                                    text = note.content.take(80) + if (note.content.length > 80) "..." else "",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = onSurfaceVariantColor
-                                )
+                        tags.take(5).forEach { tag ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(AccentColor.copy(alpha = 0.2f))
+                                    .border(1.dp, AccentColor.copy(alpha = 0.4f),
+                                        RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text("#$tag", fontSize = 12.sp,
+                                    color = PrimaryColor, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
                 }
             }
 
-            if (error != null) {
+            // المحتوى
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                if (isEditMode) {
+                    BasicTextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        textStyle = TextStyle(
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            lineHeight = 26.sp
+                        ),
+                        cursorBrush = SolidColor(PrimaryColor),
+                        visualTransformation = MarkdownVisualTransformation(
+                            primaryColor = PrimaryColor,
+                            onSurface = Color.White
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 300.dp),
+                        decorationBox = { inner ->
+                            if (content.isEmpty()) {
+                                Text("واصل أفكارك...",
+                                    color = OnSurfaceVariant.copy(alpha = 0.4f),
+                                    fontSize = 16.sp)
+                            }
+                            inner()
+                        }
+                    )
+                } else {
+                    // وضع القراءة — Markdown rendering
+                    ReadModeContent(
+                        content = content,
+                        notes = notes,
+                        onNavigateToNote = onNavigateToNote
+                    )
+                }
+            }
+
+            // Connections / Backlinks
+            if (backlinks.isNotEmpty()) {
                 item {
-                    Text(error!!, color = errorColor)
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.AccountTree, contentDescription = null,
+                            tint = PrimaryColor, modifier = Modifier.size(16.dp))
+                        Text(
+                            text = "الروابط (${backlinks.size})",
+                            fontSize = 11.sp,
+                            letterSpacing = 2.sp,
+                            color = PrimaryColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                items(backlinks) { note ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(SurfaceColor)
+                            .clickable { onNavigateToNote(note.id) }
+                            .padding(14.dp)
+                    ) {
+                        Text(note.title, color = Color.White,
+                            fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        if (note.content.isNotBlank()) {
+                            Text(
+                                text = "مذكور في: \"${note.content.take(50)}...\"",
+                                fontSize = 12.sp,
+                                color = OnSurfaceVariant
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text("+ رابط جديد", fontSize = 13.sp,
+                            color = OnSurfaceVariant,
+                            modifier = Modifier.clickable { })
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(80.dp)) }
+        }
+
+        // Bottom Toolbar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(SurfaceColor)
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            listOf(
+                Icons.Default.TextFields to "نص",
+                Icons.Default.FormatBold to "عريض",
+                Icons.Default.FormatListBulleted to "قائمة",
+                Icons.Default.Link to "رابط",
+                Icons.Default.Image to "صورة",
+                Icons.Default.Tag to "تاج",
+                Icons.Default.Keyboard to "كيبورد"
+            ).forEach { (icon, label) ->
+                IconButton(
+                    onClick = {
+                        when (label) {
+                            "عريض" -> content += "****"
+                            "قائمة" -> content += "\n- "
+                            "تاج" -> content += " #"
+                            "رابط" -> content += " [[]]"
+                        }
+                    }
+                ) {
+                    Icon(icon, contentDescription = label,
+                        tint = OnSurfaceVariant, modifier = Modifier.size(20.dp))
                 }
             }
         }
     }
 
+    // Delete Dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("حذف الملاحظة") },
-            text = { Text("متأكد إنك عايز تحذف \"$title\"؟") },
+            containerColor = SurfaceColor,
+            title = { Text("حذف الملاحظة", color = Color.White) },
+            text = { Text("متأكد إنك عايز تحذف \"$title\"؟", color = OnSurfaceVariant) },
             confirmButton = {
                 TextButton(onClick = {
                     existing?.let { viewModel.deleteNote(it) }
                     showDeleteDialog = false
                     onBack()
-                }) {
-                    Text("حذف", color = errorColor)
-                }
+                }) { Text("حذف", color = ErrorColor) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("إلغاء")
+                    Text("إلغاء", color = OnSurfaceVariant)
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun ReadModeContent(
+    content: String,
+    notes: List<com.noteflow.app.features.notes.domain.model.Note>,
+    onNavigateToNote: (Long) -> Unit
+) {
+    if (content.isBlank()) {
+        Text("لا يوجد محتوى", color = OnSurfaceVariant.copy(alpha = 0.5f), fontSize = 16.sp)
+        return
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        content.split("\n").forEach { line ->
+            when {
+                line.startsWith("# ") -> {
+                    Text(line.substring(2), fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold, color = PrimaryColor)
+                }
+                line.startsWith("## ") -> {
+                    Text(line.substring(3), fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold, color = PrimaryColor)
+                }
+                line.startsWith("- ") || line.startsWith("• ") -> {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("•", color = PrimaryColor, fontSize = 16.sp)
+                        Text(line.substring(2), color = Color.White, fontSize = 16.sp,
+                            lineHeight = 24.sp)
+                    }
+                }
+                line.startsWith("> ") -> {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Box(
+                            modifier = Modifier
+                                .width(3.dp)
+                                .height(60.dp)
+                                .background(AccentColor)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp))
+                                .background(SurfaceHigh)
+                                .padding(12.dp)
+                        ) {
+                            Text(line.substring(2), color = OnSurfaceVariant,
+                                fontSize = 15.sp, fontStyle = FontStyle.Italic,
+                                lineHeight = 24.sp)
+                        }
+                    }
+                }
+                line.contains("[[") -> {
+                    // [[links]]
+                    val annotated = buildAnnotatedString {
+                        val regex = Regex("""\[\[(.+?)]]""")
+                        var lastIndex = 0
+                        regex.findAll(line).forEach { match ->
+                            append(line.substring(lastIndex, match.range.first))
+                            val linkTitle = match.groupValues[1]
+                            val linkedNote = notes.find { it.title == linkTitle }
+                            if (linkedNote != null) {
+                                pushStringAnnotation("NOTE_LINK", linkedNote.id.toString())
+                                withStyle(SpanStyle(color = PrimaryColor,
+                                    fontWeight = FontWeight.Bold,
+                                    textDecoration = TextDecoration.Underline)) {
+                                    append(linkTitle)
+                                }
+                                pop()
+                            } else {
+                                withStyle(SpanStyle(color = ErrorColor)) {
+                                    append(linkTitle)
+                                }
+                            }
+                            lastIndex = match.range.last + 1
+                        }
+                        if (lastIndex < line.length) append(line.substring(lastIndex))
+                    }
+                    androidx.compose.foundation.text.ClickableText(
+                        text = annotated,
+                        style = TextStyle(color = Color.White, fontSize = 16.sp,
+                            lineHeight = 26.sp),
+                        onClick = { offset ->
+                            annotated.getStringAnnotations("NOTE_LINK", offset, offset)
+                                .firstOrNull()?.let {
+                                    onNavigateToNote(it.item.toLong())
+                                }
+                        }
+                    )
+                }
+                line.contains("**") -> {
+                    val annotated = buildAnnotatedString {
+                        val parts = line.split("**")
+                        parts.forEachIndexed { i, part ->
+                            if (i % 2 == 1) {
+                                withStyle(SpanStyle(fontWeight = FontWeight.Bold,
+                                    color = Color.White)) { append(part) }
+                            } else {
+                                withStyle(SpanStyle(color = Color.White)) { append(part) }
+                            }
+                        }
+                    }
+                    Text(annotated, fontSize = 16.sp, lineHeight = 26.sp)
+                }
+                line.isBlank() -> Spacer(modifier = Modifier.height(8.dp))
+                else -> Text(line, color = Color.White, fontSize = 16.sp, lineHeight = 26.sp)
+            }
+        }
     }
 }
