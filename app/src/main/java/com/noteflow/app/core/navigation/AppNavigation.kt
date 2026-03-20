@@ -1,5 +1,6 @@
 package com.noteflow.app.core.navigation
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
@@ -7,6 +8,7 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -59,7 +61,11 @@ fun AppNavigation() {
             }
         }
     ) { padding ->
-        NavHost(navController = navController, startDestination = "notes") {
+        NavHost(
+            navController = navController,
+            startDestination = "notes",
+            modifier = Modifier.padding(padding)
+        ) {
             composable("notes") {
                 NoteListScreen(
                     onNoteClick = { id -> navController.navigate("note/$id") },
