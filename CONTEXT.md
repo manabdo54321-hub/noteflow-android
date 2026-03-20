@@ -15,9 +15,10 @@
 - Material Icons Extended
 
 ## هيكل التطبيق
-- **5 Tabs:** ملاحظات / مهام / تايمر / إحصائيات / إعدادات
+- **5 Tabs:** الرئيسية / ملاحظات / إضافة / مهام / إحصائيات
 - **Architecture:** Clean Architecture (Domain / Data / Presentation)
 - **Versioning:** تلقائي من عدد الـ commits في build.gradle.kts
+- **Theme:** داكن #131313 مع بنفسجي #CABEFF
 
 ## الملفات الموجودة
 
@@ -31,6 +32,8 @@
 - app/build.gradle.kts
 - .github/workflows/build.yml
 - app/src/main/AndroidManifest.xml
+- app/src/main/res/values/themes.xml
+- app/src/main/res/drawable/ic_splash.xml
 - app/src/main/java/com/noteflow/app/MainActivity.kt
 - app/src/main/java/com/noteflow/app/NoteFlowApp.kt
 
@@ -38,6 +41,13 @@
 - app/src/main/java/com/noteflow/app/core/database/AppDatabase.kt
 - app/src/main/java/com/noteflow/app/core/di/AppModule.kt
 - app/src/main/java/com/noteflow/app/core/navigation/AppNavigation.kt
+
+### Intro & Onboarding
+- app/src/main/java/com/noteflow/app/features/intro/presentation/IntroScreen.kt
+- app/src/main/java/com/noteflow/app/features/intro/presentation/OnboardingScreen.kt
+
+### الرئيسية
+- app/src/main/java/com/noteflow/app/features/home/presentation/HomeScreen.kt
 
 ### الملاحظات
 - app/src/main/java/com/noteflow/app/features/notes/domain/model/Note.kt
@@ -74,35 +84,33 @@
 
 ## المراحل المكتملة
 ✅ المرحلة 0 — Build شغال
-✅ المرحلة 1 — قاعدة البيانات جاهزة
+✅ المرحلة 1 — قاعدة البيانات
 ✅ المرحلة 2 — شاشات الملاحظات
 ✅ المرحلة 3 — المهام والبومودورو
 ✅ المرحلة 4 — الربط والذكاء
-✅ تحسينات إضافية:
-   - وضع قراءة/تعديل زي Obsidian
-   - Auto-save
-   - [[links]] تتلون أثناء الكتابة وتختفي الأقواس في وضع القراءة
-   - حذف وتعديل الملاحظات والمهام
-   - سجل المهام المكتملة
-   - إصلاح الإحصائيات
+✅ تحسينات مضافة:
+   - Intro + Onboarding screens
+   - HomeScreen مع Daily Mastery + streak + Daily Goal
+   - NoteListScreen مع Search + Filters
+   - NoteDetailScreen مع Markdown + Tags + Connections
+   - TaskListScreen مع Priority groups + badges
+   - TimerScreen مع Session counter + Task picker
+   - StatsScreen مع Charts
+   - SettingsScreen مع Theme picker
+   - Backlinks + Auto-save + حذف وتعديل الملاحظات والمهام
+   - شاشة Splash Screen + Onboarding أول مرة بس
 
 ## قواعد مهمة
 - ملف واحد في كل مرة
-- الألوان تيجي من MaterialTheme مش hardcoded
+- الألوان: BgColor=#131313, SurfaceColor=#1C1B1B, PrimaryColor=#CABEFF, AccentColor=#8A70FF
 - استخدم Divider() مش HorizontalDivider
 - لو في تعديل على ملف قديم، ابعت محتواه الأول
-- AppDatabase.kt هو الملف الوحيد اللي بيتلمس من القديم لما نضيف feature جديدة
 - commit بعد كل ملف شغال
 
 ## الخطوة الجاية
 المرحلة 5: الميزات المتقدمة
-أول حاجة: Markdown Rendering
-
-## ملفات إضافية
-- app/src/main/res/values/themes.xml
-- app/src/main/res/drawable/ic_splash.xml
-- app/src/main/java/com/noteflow/app/features/intro/presentation/IntroScreen.kt
-- app/src/main/res/values/themes.xml
-- app/src/main/res/drawable/ic_splash.xml
-- app/src/main/java/com/noteflow/app/features/intro/presentation/IntroScreen.kt
-- app/src/main/java/com/noteflow/app/features/intro/presentation/OnboardingScreen.kt
+- Markdown Rendering كامل
+- Graph View
+- AI Integration بـ Groq
+- Tags & Folders
+- Export PDF
