@@ -1,17 +1,20 @@
 package com.noteflow.app.core.navigation
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -27,12 +30,16 @@ import com.noteflow.app.features.stats.presentation.screens.StatsScreen
 import com.noteflow.app.features.tasks.presentation.screens.TaskListScreen
 import com.noteflow.app.features.timer.presentation.screens.TimerScreen
 
+private val BgColor = Color(0xFF131313)
+private val PrimaryColor = Color(0xFFCABEFF)
+private val SurfaceColor = Color(0xFF1C1B1B)
+
 sealed class BottomNavItem(val route: String, val label: String, val icon: ImageVector) {
-    object Notes : BottomNavItem("notes", "ملاحظات", Icons.Default.Home)
+    object Home : BottomNavItem("home", "الرئيسية", Icons.Default.Home)
+    object Notes : BottomNavItem("notes", "ملاحظات", Icons.Default.Notes)
+    object Add : BottomNavItem("add", "إضافة", Icons.Default.Add)
     object Tasks : BottomNavItem("tasks", "مهام", Icons.Default.CheckCircle)
-    object Timer : BottomNavItem("timer", "تايمر", Icons.Default.Timer)
     object Stats : BottomNavItem("stats", "إحصائيات", Icons.Default.BarChart)
-    object Settings : BottomNavItem("settings", "إعدادات", Icons.Default.Settings)
 }
 
 @Composable
@@ -42,32 +49,65 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     val bottomItems = listOf(
+        BottomNavItem.Home,
         BottomNavItem.Notes,
+        BottomNavItem.Add,
         BottomNavItem.Tasks,
-        BottomNavItem.Timer,
-        BottomNavItem.Stats,
-        BottomNavItem.Settings
+        BottomNavItem.Stats
     )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val bottomRoutes = bottomItems.map { it.route }
+    val bottomRoutes = listOf("home", "notes", "tasks", "stats")
 
     Scaffold(
+        containerColor = BgColor,
         bottomBar = {
             if (currentRoute in bottomRoutes) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = SurfaceColor,
+                    tonalElevation = 0.dp
+                ) {
                     bottomItems.forEach { item ->
+                        val isAdd = item.route == "add"
                         NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
+                            icon = {
+                                if (isAdd) {
+                                    Surface(
+                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                                        color = PrimaryColor,
+                                        modifier = Modifier.size(48.dp)
+                                    ) {
+                                        Icon(
+                                            item.icon,
+                                            contentDescription = item.label,
+                                            tint = Color(0xFF1C0062),
+                                            modifier = Modifier.padding(12.dp)
+                                        )
+                                    }
+                                } else {
+                                    Icon(item.icon, contentDescription = item.label)
+                                }
+                            },
+                            label = { if (!isAdd) Text(item.label) },
                             selected = currentRoute == item.route,
                             onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo("notes") { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                if (item.route == "add") {
+                                    navController.navigate("note/0")
+                                } else {
+                                    navController.navigate(item.route) {
+                                        popUpTo("home") { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
-                            }
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = PrimaryColor,
+                                selectedTextColor = PrimaryColor,
+                                unselectedIconColor = Color(0xFF929097),
+                                unselectedTextColor = Color(0xFF929097),
+                                indicatorColor = Color.Transparent
+                            )
                         )
                     }
                 }
@@ -79,7 +119,6 @@ fun AppNavigation(
             startDestination = "intro",
             modifier = Modifier.padding(padding)
         ) {
-            // كل مرة
             composable("intro") {
                 IntroScreen(
                     onFinished = {
@@ -88,22 +127,27 @@ fun AppNavigation(
                                 popUpTo("intro") { inclusive = true }
                             }
                         } else {
-                            navController.navigate("notes") {
+                            navController.navigate("home") {
                                 popUpTo("intro") { inclusive = true }
                             }
                         }
                     }
                 )
             }
-            // أول مرة بس
             composable("onboarding") {
                 OnboardingScreen(
                     onFinished = {
                         onOnboardingFinished()
-                        navController.navigate("notes") {
+                        navController.navigate("home") {
                             popUpTo("onboarding") { inclusive = true }
                         }
                     }
+                )
+            }
+            composable("home") {
+                NoteListScreen(
+                    onNoteClick = { id -> navController.navigate("note/$id") },
+                    onAddNote = { navController.navigate("note/0") }
                 )
             }
             composable("notes") {
