@@ -7,6 +7,8 @@ import com.noteflow.app.features.notes.data.local.NoteDao
 import com.noteflow.app.features.notes.data.repository.NoteRepository
 import com.noteflow.app.features.tasks.data.local.TaskDao
 import com.noteflow.app.features.tasks.data.repository.TaskRepository
+import com.noteflow.app.features.timer.data.local.SessionDao
+import com.noteflow.app.features.timer.data.repository.SessionRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -48,4 +50,14 @@ object AppModule {
     @Singleton
     fun provideTaskRepository(taskDao: TaskDao): TaskRepository =
         TaskRepository(taskDao)
+
+    @Provides
+    @Singleton
+    fun provideSessionDao(database: AppDatabase): SessionDao =
+        database.sessionDao()
+
+    @Provides
+    @Singleton
+    fun provideSessionRepository(sessionDao: SessionDao): SessionRepository =
+        SessionRepository(sessionDao)
 }
