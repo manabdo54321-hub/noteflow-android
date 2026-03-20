@@ -3,6 +3,7 @@ package com.noteflow.app.features.notes.presentation.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -12,13 +13,40 @@ import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.noteflow.app.features.notes.presentation.NoteViewModel
+
+// VisualTransformation تلوّن [[...]] أثناء الكتابة
+class LinkVisualTransformation(
+    private val linkColor: androidx.compose.ui.graphics.Color
+) : VisualTransformation {
+    override fun filter(text: androidx.compose.ui.text.AnnotatedString): TransformedText {
+        val annotated = buildAnnotatedString {
+            val regex = Regex("""\[\[(.+?)]]""")
+            var lastIndex = 0
+            regex.findAll(text.text).forEach { match ->
+                append(text.text.substring(lastIndex, match.range.first))
+                withStyle(SpanStyle(color = linkColor, fontWeight = FontWeight.Bold)) {
+                    append(match.value)
+                }
+                lastIndex = match.range.last + 1
+            }
+            if (lastIndex < text.text.length) append(text.text.substring(lastIndex))
+        }
+        return TransformedText(annotated, OffsetMapping.Identity)
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +72,6 @@ fun NoteDetailScreen(
 
     val error by viewModel.error.collectAsState()
 
-    // Auto-save لما تتغير العنوان أو المحتوى
     LaunchedEffect(title, content) {
         if (title.isNotBlank()) {
             viewModel.triggerAutoSave(title, content, noteId)
@@ -61,8 +88,8 @@ fun NoteDetailScreen(
         }
     }
 
-    // النص مع الـ [[links]] قابلة للضغط في وضع القراءة
-    val annotatedContent = remember(content, notes, primaryColor, errorColor) {
+    // وضع القراءة — الأقواس بتختفي والكلمة بس بتبان كرابط
+    val readModeContent = remember(content, notes, primaryColor, errorColor) {
         buildAnnotatedString {
             val regex = Regex("""\[\[(.+?)]]""")
             var lastIndex = 0
@@ -72,13 +99,19 @@ fun NoteDetailScreen(
                 val linkedNote = notes.find { it.title == linkTitle }
                 if (linkedNote != null) {
                     pushStringAnnotation("NOTE_LINK", linkedNote.id.toString())
-                    withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold)) {
-                        append("[[${linkTitle}]]")
+                    withStyle(SpanStyle(
+                        color = primaryColor,
+                        fontWeight = FontWeight.Bold
+                    )) {
+                        append(linkTitle) // الكلمة بس بدون [[]]
                     }
                     pop()
                 } else {
-                    withStyle(SpanStyle(color = errorColor)) {
-                        append("[[${linkTitle}]]")
+                    withStyle(SpanStyle(
+                        color = errorColor,
+                        fontWeight = FontWeight.Bold
+                    )) {
+                        append(linkTitle) // الكلمة بس بدون [[]]
                     }
                 }
                 lastIndex = match.range.last + 1
@@ -92,16 +125,21 @@ fun NoteDetailScreen(
             TopAppBar(
                 title = {
                     if (isEditMode) {
-                        OutlinedTextField(
+                        BasicTextField(
                             value = title,
                             onValueChange = { title = it },
-                            placeholder = { Text("العنوان") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedBorderColor = MaterialTheme.colorScheme.surface,
-                                focusedBorderColor = MaterialTheme.colorScheme.surface
-                            )
+                            textStyle = TextStyle(
+                                color = onSurfaceColor,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            cursorBrush = SolidColor(primaryColor),
+                            decorationBox = { inner ->
+                                if (title.isEmpty()) {
+                                    Text("العنوان", color = onSurfaceVariantColor)
+                                }
+                                inner()
+                            }
                         )
                     } else {
                         Text(title.ifBlank { "بدون عنوان" })
@@ -118,7 +156,6 @@ fun NoteDetailScreen(
                     }
                 },
                 actions = {
-                    // زر القلم/الكتاب
                     IconButton(onClick = {
                         if (isEditMode && title.isNotBlank()) {
                             viewModel.saveNote(title, content, noteId)
@@ -130,11 +167,9 @@ fun NoteDetailScreen(
                             contentDescription = if (isEditMode) "وضع القراءة" else "وضع التعديل"
                         )
                     }
-                    // زر الحذف — بس لو الملاحظة موجودة
                     if (noteId != 0L) {
                         IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "حذف",
-                                tint = errorColor)
+                            Icon(Icons.Default.Delete, contentDescription = "حذف", tint = errorColor)
                         }
                     }
                 }
@@ -148,43 +183,51 @@ fun NoteDetailScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // المحتوى — تعديل أو قراءة
             item {
                 if (isEditMode) {
-                    OutlinedTextField(
+                    // وضع التعديل — [[...]] بتتلون أثناء الكتابة
+                    BasicTextField(
                         value = content,
                         onValueChange = { content = it },
-                        placeholder = { Text("ابدأ الكتابة...") },
+                        textStyle = TextStyle(
+                            color = onSurfaceColor,
+                            fontSize = 16.sp,
+                            lineHeight = 24.sp
+                        ),
+                        cursorBrush = SolidColor(primaryColor),
+                        visualTransformation = LinkVisualTransformation(primaryColor),
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 300.dp),
-                        maxLines = Int.MAX_VALUE,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                        )
+                        decorationBox = { inner ->
+                            if (content.isEmpty()) {
+                                Text("ابدأ الكتابة...", color = onSurfaceVariantColor)
+                            }
+                            inner()
+                        }
                     )
                 } else {
-                    // وضع القراءة مع الـ [[links]]
-                    if (content.contains("[[")) {
+                    // وضع القراءة — الأقواس بتختفي والكلمة بس بتبان
+                    if (content.isBlank()) {
+                        Text(
+                            text = "لا يوجد محتوى",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = onSurfaceVariantColor
+                        )
+                    } else {
                         ClickableText(
-                            text = annotatedContent,
+                            text = readModeContent,
                             style = MaterialTheme.typography.bodyLarge.copy(
-                                color = onSurfaceColor
+                                color = onSurfaceColor,
+                                lineHeight = 24.sp
                             ),
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { offset ->
-                                annotatedContent.getStringAnnotations("NOTE_LINK", offset, offset)
+                                readModeContent.getStringAnnotations("NOTE_LINK", offset, offset)
                                     .firstOrNull()?.let { annotation ->
                                         onNavigateToNote(annotation.item.toLong())
                                     }
                             }
-                        )
-                    } else {
-                        Text(
-                            text = content.ifBlank { "لا يوجد محتوى" },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (content.isBlank()) onSurfaceVariantColor else onSurfaceColor,
-                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -228,7 +271,6 @@ fun NoteDetailScreen(
         }
     }
 
-    // Dialog تأكيد الحذف
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
