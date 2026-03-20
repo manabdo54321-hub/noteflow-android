@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.noteflow.app.features.intro.presentation.IntroScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteListScreen
 import com.noteflow.app.features.settings.presentation.screens.SettingsScreen
@@ -71,9 +72,18 @@ fun AppNavigation() {
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = "notes",
+            startDestination = "intro",
             modifier = Modifier.padding(padding)
         ) {
+            composable("intro") {
+                IntroScreen(
+                    onFinished = {
+                        navController.navigate("notes") {
+                            popUpTo("intro") { inclusive = true }
+                        }
+                    }
+                )
+            }
             composable("notes") {
                 NoteListScreen(
                     onNoteClick = { id -> navController.navigate("note/$id") },
