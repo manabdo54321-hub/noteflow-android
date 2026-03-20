@@ -11,28 +11,34 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.noteflow.app.features.notes.presentation.NoteViewModel
-import com.noteflow.app.features.tasks.presentation.TaskViewModel
+import com.noteflow.app.features.stats.presentation.StatsViewModel
 import com.noteflow.app.features.timer.presentation.TimerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
     noteViewModel: NoteViewModel = hiltViewModel(),
-    taskViewModel: TaskViewModel = hiltViewModel(),
+    statsViewModel: StatsViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel()
 ) {
     val notes by noteViewModel.notes.collectAsState()
-    val tasks by taskViewModel.tasks.collectAsState()
+    val allTasks by statsViewModel.allTasks.collectAsState()
     val completedSessions by timerViewModel.completedSessions.collectAsState()
 
-    val completedToday = tasks.count { task ->
-        task.isCompleted && isToday(task.createdAt)
-    }
-    val totalCompleted = tasks.count { it.isCompleted }
+    val context = LocalContext.current
+    val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+    val versionName = packageInfo.versionName
+    val versionCode = packageInfo.versionCode
+
+    val activeTasks = allTasks.filter { !it.isCompleted }
+    val completedTasks = allTasks.filter { it.isCompleted }
+    val completedToday = completedTasks.count { isToday(it.createdAt) }
     val totalHours = (completedSessions * 25) / 60f
+    val linkedNotes = notes.count { it.content.contains("[[") }
 
     Scaffold(
         topBar = {
@@ -69,7 +75,7 @@ fun StatsScreen(
                     StatCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.CheckCircle,
-                        value = "${tasks.size}",
+                        value = "${allTasks.size}",
                         label = "مهمة",
                         color = MaterialTheme.colorScheme.secondary
                     )
@@ -87,21 +93,52 @@ fun StatsScreen(
                 Divider()
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "التفاصيل",
+                    text = "المهام",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
 
-            item { DetailRow(label = "مهام خلصت النهارده", value = "$completedToday") }
-            item { DetailRow(label = "إجمالي المهام المكتملة", value = "$totalCompleted / ${tasks.size}") }
-            item { DetailRow(label = "ساعات تركيز إجمالية", value = "${"%.1f".format(totalHours)} ساعة") }
+            item { DetailRow(label = "مهام نشطة", value = "${activeTasks.size}") }
+            item { DetailRow(label = "مهام مكتملة", value = "${completedTasks.size}") }
+            item { DetailRow(label = "مكتملة النهارده", value = "$completedToday") }
             item {
                 DetailRow(
-                    label = "ملاحظات مترابطة",
-                    value = "${notes.count { it.content.contains("[[") }}"
+                    label = "نسبة الإنجاز",
+                    value = if (allTasks.isEmpty()) "0%"
+                    else "${"%.0f".format(completedTasks.size * 100f / allTasks.size)}%"
                 )
             }
+
+            item {
+                Divider()
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "التركيز",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            item { DetailRow(label = "جلسات بومودورو", value = "$completedSessions") }
+            item { DetailRow(label = "ساعات تركيز", value = "${"%.1f".format(totalHours)} ساعة") }
+            item { DetailRow(label = "دقائق تركيز", value = "${completedSessions * 25} دقيقة") }
+
+            item {
+                Divider()
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "الملاحظات",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            item { DetailRow(label = "إجمالي الملاحظات", value = "${notes.size}") }
+            item { DetailRow(label = "ملاحظات مترابطة", value = "$linkedNotes") }
+
+            item { Divider() }
+            item { DetailRow(label = "إصدار التطبيق", value = "v$versionName ($versionCode)") }
         }
     }
 }
@@ -116,9 +153,7 @@ fun StatCard(
 ) {
     Card(modifier = modifier) {
         Column(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -133,9 +168,7 @@ fun StatCard(
 @Composable
 fun DetailRow(label: String, value: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
