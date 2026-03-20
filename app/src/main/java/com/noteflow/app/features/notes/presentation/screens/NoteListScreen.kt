@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,13 +28,11 @@ import com.noteflow.app.features.notes.presentation.NoteViewModel
 
 private val BgColor = Color(0xFF131313)
 private val SurfaceColor = Color(0xFF1C1B1B)
-private val SurfaceHigh = Color(0xFF2A2A2A)
 private val PrimaryColor = Color(0xFFCABEFF)
 private val AccentColor = Color(0xFF8A70FF)
 private val OnSurfaceVariant = Color(0xFFC8C5CD)
 private val OutlineVariant = Color(0xFF47464C)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteListScreen(
     onNoteClick: (Long) -> Unit,
@@ -55,7 +56,6 @@ fun NoteListScreen(
             .background(BgColor),
         contentPadding = PaddingValues(bottom = 32.dp)
     ) {
-        // Header
         item {
             Row(
                 modifier = Modifier
@@ -74,7 +74,6 @@ fun NoteListScreen(
             }
         }
 
-        // Search
         item {
             Row(
                 modifier = Modifier
@@ -97,20 +96,18 @@ fun NoteListScreen(
                     BasicTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        textStyle = androidx.compose.ui.text.TextStyle(
-                            color = Color.White, fontSize = 14.sp
-                        ),
-                        decorationBox = { inner ->
+                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                        cursorBrush = SolidColor(PrimaryColor),
+                        modifier = Modifier.weight(1f),
+                        decorationBox = { innerTextField ->
                             if (searchQuery.isEmpty()) {
                                 Text("ابحث في الملاحظات...",
                                     color = OnSurfaceVariant, fontSize = 14.sp)
                             }
-                            inner()
-                        },
-                        modifier = Modifier.weight(1f)
+                            innerTextField()
+                        }
                     )
                 }
-                // Graph View button
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -118,13 +115,12 @@ fun NoteListScreen(
                         .background(SurfaceColor),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.AccountTree, contentDescription = null,
+                    Icon(Icons.Default.Hub, contentDescription = null,
                         tint = OnSurfaceVariant, modifier = Modifier.size(18.dp))
                 }
             }
         }
 
-        // Filters
         item {
             Row(
                 modifier = Modifier
@@ -157,7 +153,6 @@ fun NoteListScreen(
             }
         }
 
-        // Notes List
         if (filtered.isEmpty()) {
             item {
                 Box(
@@ -184,7 +179,6 @@ fun NoteListScreen(
                         .clickable { onNoteClick(note.id) }
                         .padding(16.dp)
                 ) {
-                    // عنوان
                     Text(
                         text = note.title,
                         fontWeight = FontWeight.Bold,
@@ -202,7 +196,6 @@ fun NoteListScreen(
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    // الـ divider
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
