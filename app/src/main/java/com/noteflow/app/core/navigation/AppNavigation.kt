@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -27,6 +28,7 @@ import com.noteflow.app.features.intro.presentation.IntroScreen
 import com.noteflow.app.features.intro.presentation.OnboardingScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteListScreen
+import com.noteflow.app.features.search.presentation.SearchScreen
 import com.noteflow.app.features.settings.presentation.screens.SettingsScreen
 import com.noteflow.app.features.stats.presentation.screens.StatsScreen
 import com.noteflow.app.features.tasks.presentation.screens.TaskListScreen
@@ -148,13 +150,14 @@ fun AppNavigation(
             }
             composable("home") {
                 HomeScreen(
-                    onNavigateToNotes = { navController.navigate("notes") },
-                    onNavigateToStats = { navController.navigate("stats") },
-                    onNavigateToSettings = { navController.navigate("settings") },
                     onNoteClick = { id -> navController.navigate("note/$id") },
                     onAddNote = { navController.navigate("note/0") },
                     onNavigateToTimer = { navController.navigate("timer") },
-                    onNavigateToTasks = { navController.navigate("tasks") }
+                    onNavigateToTasks = { navController.navigate("tasks") },
+                    onNavigateToNotes = { navController.navigate("notes") },
+                    onNavigateToStats = { navController.navigate("stats") },
+                    onNavigateToSettings = { navController.navigate("settings") },
+                    onNavigateToSearch = { navController.navigate("search") }
                 )
             }
             composable("notes") {
@@ -184,6 +187,12 @@ fun AppNavigation(
             composable("timer") { TimerScreen() }
             composable("stats") { StatsScreen() }
             composable("settings") { SettingsScreen() }
+            composable("search") {
+                SearchScreen(
+                    onBack = { navController.popBackStack() },
+                    onNoteClick = { id -> navController.navigate("note/$id") }
+                )
+            }
         }
     }
 }
