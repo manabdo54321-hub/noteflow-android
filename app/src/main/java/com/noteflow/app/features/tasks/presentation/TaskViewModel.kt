@@ -19,10 +19,10 @@ class TaskViewModel @Inject constructor(
     val tasks: StateFlow<List<Task>> = repository.getActiveTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun saveTask(title: String, noteId: Long? = null) {
+    fun saveTask(title: String, noteId: Long? = null, id: Long = 0) {
         if (title.isBlank()) return
         viewModelScope.launch {
-            repository.saveTask(Task(title = title.trim(), noteId = noteId))
+            repository.saveTask(Task(id = id, title = title.trim(), noteId = noteId))
         }
     }
 
