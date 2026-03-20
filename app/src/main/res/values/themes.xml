@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.NoteFlow" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">#0a0e1a</item>
+    <style name="Theme.NoteFlow" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">#131313</item>
     </style>
 
     <style name="Theme.NoteFlow.SplashScreen" parent="Theme.SplashScreen">
