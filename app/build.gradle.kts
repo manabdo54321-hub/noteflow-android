@@ -5,6 +5,13 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+val commitCount = try {
+    val process = Runtime.getRuntime().exec(arrayOf("git", "rev-list", "--count", "HEAD"))
+    process.inputStream.bufferedReader().readText().trim().toInt()
+} catch (e: Exception) {
+    1
+}
+
 android {
     namespace = "com.noteflow.app"
     compileSdk = 34
@@ -13,8 +20,8 @@ android {
         applicationId = "com.noteflow.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = commitCount
+        versionName = "1.${commitCount}"
     }
 
     buildFeatures {
