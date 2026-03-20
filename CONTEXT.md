@@ -12,6 +12,7 @@
 - Hilt (Dependency Injection)
 - Navigation Compose
 - Coroutines + Flow
+- Material Icons Extended
 
 ## الملفات الموجودة
 - settings.gradle.kts
@@ -43,13 +44,18 @@
 - app/src/main/java/com/noteflow/app/features/tasks/data/repository/TaskRepository.kt
 - app/src/main/java/com/noteflow/app/features/tasks/presentation/TaskViewModel.kt
 - app/src/main/java/com/noteflow/app/features/tasks/presentation/screens/TaskListScreen.kt
+- app/src/main/java/com/noteflow/app/features/timer/data/local/SessionEntity.kt
+- app/src/main/java/com/noteflow/app/features/timer/data/local/SessionDao.kt
+- app/src/main/java/com/noteflow/app/features/timer/data/repository/SessionRepository.kt
+- app/src/main/java/com/noteflow/app/features/timer/presentation/TimerViewModel.kt
+- app/src/main/java/com/noteflow/app/features/timer/presentation/screens/TimerScreen.kt
 
 ## المرحلة الحالية
 ✅ المرحلة 0 مكتملة — Build شغال
 ✅ المرحلة 1 مكتملة — قاعدة البيانات جاهزة
 ✅ المرحلة 2 مكتملة — شاشات الملاحظات شغالة
-✅ المرحلة 3 مكتملة — المهام شغالة
+✅ المرحلة 3 مكتملة — المهام والبومودورو شغالين
 
 ## الخطوة الجاية
-المرحلة 4: البومودورو
-أول ملف: PomodoroState.kt
+المرحلة 4: الربط والذكاء
+أول حاجة: Backlinks — ربط الملاحظات ببعض
