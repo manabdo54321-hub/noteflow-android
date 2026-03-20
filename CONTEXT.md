@@ -97,3 +97,7 @@
 ## الخطوة الجاية
 المرحلة 5: الميزات المتقدمة
 أول حاجة: Markdown Rendering
+
+## ملفات إضافية
+- app/src/main/res/values/themes.xml
+- app/src/main/res/drawable/ic_splash.xml
