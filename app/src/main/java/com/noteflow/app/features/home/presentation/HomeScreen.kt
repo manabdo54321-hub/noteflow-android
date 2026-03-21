@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.noteflow.app.features.notes.presentation.NoteViewModel
-import com.noteflow.app.features.stats.presentation.StatsViewModel
 import com.noteflow.app.features.tasks.domain.model.Task
 import com.noteflow.app.features.tasks.presentation.TaskViewModel
 import com.noteflow.app.features.timer.presentation.TimerViewModel
@@ -55,7 +54,6 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToSearch: () -> Unit,
     noteViewModel: NoteViewModel = hiltViewModel(),
-    statsViewModel: StatsViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel(),
     taskViewModel: TaskViewModel = hiltViewModel()
 ) {
@@ -411,7 +409,7 @@ fun HomeScreen(
                 DrawerItem(Icons.Default.CheckCircle, "المهام") { showLeftDrawer = false; onNavigateToTasks() }
                 DrawerItem(Icons.Default.Timer, "التايمر") { showLeftDrawer = false; onNavigateToTimer() }
                 DrawerItem(Icons.Default.BarChart, "الإحصائيات") { showLeftDrawer = false; onNavigateToStats() }
-                Divider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 8.dp))
                 Text("إضافات", fontSize = 11.sp, letterSpacing = 2.sp,
                     color = PrimaryColor, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -454,7 +452,7 @@ fun HomeScreen(
                         Text("noteflow@app.io", fontSize = 12.sp, color = OnSurfaceVariant)
                     }
                 }
-                Divider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
                 Text("الإعدادات", fontSize = 11.sp, letterSpacing = 2.sp,
                     color = PrimaryColor, fontWeight = FontWeight.Bold)
                 DrawerItem(Icons.Default.Settings, "إعدادات التطبيق") { showRightDrawer = false; onNavigateToSettings() }
@@ -462,7 +460,7 @@ fun HomeScreen(
                 DrawerItem(Icons.Default.Notifications, "الإشعارات") { showRightDrawer = false }
                 DrawerItem(Icons.Default.Security, "الأمان") { showRightDrawer = false }
                 DrawerItem(Icons.Default.Sync, "المزامنة") { showRightDrawer = false }
-                Divider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
                 DrawerItem(Icons.Default.Logout, "تسجيل الخروج",
                     tint = Color(0xFFFF6B6B)) { showRightDrawer = false }
             }
