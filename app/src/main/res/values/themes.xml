@@ -5,10 +5,4 @@
         <item name="android:statusBarColor">#131313</item>
         <item name="android:navigationBarColor">#131313</item>
     </style>
-
-    <style name="Theme.NoteFlow.SplashScreen" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#0a0e1a</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
-        <item name="postSplashScreenTheme">@style/Theme.NoteFlow</item>
-    </style>
 </resources>
