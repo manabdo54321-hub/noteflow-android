@@ -19,8 +19,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.noteflow.app.features.home.presentation.HomeScreen
-import com.noteflow.app.features.intro.presentation.IntroScreen
-import com.noteflow.app.features.intro.presentation.OnboardingScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteListScreen
 import com.noteflow.app.features.search.presentation.SearchScreen
@@ -106,30 +104,9 @@ fun AppNavigation(
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = if (isFirstTime) "intro" else "home",
+            startDestination = "home",
             modifier = Modifier.padding(padding)
         ) {
-            composable("intro") {
-                IntroScreen(onFinished = {
-                    if (isFirstTime) {
-                        navController.navigate("onboarding") {
-                            popUpTo("intro") { inclusive = true }
-                        }
-                    } else {
-                        navController.navigate("home") {
-                            popUpTo("intro") { inclusive = true }
-                        }
-                    }
-                })
-            }
-            composable("onboarding") {
-                OnboardingScreen(onFinished = {
-                    onOnboardingFinished()
-                    navController.navigate("home") {
-                        popUpTo("onboarding") { inclusive = true }
-                    }
-                })
-            }
             composable("home") {
                 HomeScreen(
                     onNoteClick = { id -> navController.navigate("note/$id") },
