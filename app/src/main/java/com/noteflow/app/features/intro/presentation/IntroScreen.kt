@@ -94,14 +94,10 @@ private fun PageOne() {
         Box(
             modifier = Modifier
                 .size(400.dp)
-                .blur(120.dp)
-                .background(PrimaryColor.copy(alpha = glowAlpha * 0.15f), CircleShape)
         )
         Box(
             modifier = Modifier
                 .size(280.dp)
-                .blur(100.dp)
-                .background(SecondaryColor.copy(alpha = glowAlpha * 0.08f), CircleShape)
         )
 
         Column(
@@ -117,8 +113,6 @@ private fun PageOne() {
                 Box(
                     modifier = Modifier
                         .size(110.dp)
-                        .blur(25.dp)
-                        .background(PrimaryColor.copy(alpha = glowAlpha * 0.5f), CircleShape)
                 )
                 Box(
                     modifier = Modifier
@@ -197,8 +191,6 @@ private fun PageTwo() {
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
-                .size(350.dp).blur(100.dp)
-                .background(PrimaryColor.copy(alpha = glowAlpha * 0.1f), CircleShape)
                 .align(Alignment.Center)
         )
 

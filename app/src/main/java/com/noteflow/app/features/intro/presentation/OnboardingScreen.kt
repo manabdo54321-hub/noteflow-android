@@ -79,15 +79,11 @@ private fun WelcomePage(onGetStarted: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(300.dp)
-                .blur(120.dp)
-                .background(PrimaryColor.copy(alpha = 0.1f), CircleShape)
                 .align(Alignment.TopEnd)
         )
         Box(
             modifier = Modifier
                 .size(250.dp)
-                .blur(100.dp)
-                .background(AccentColor.copy(alpha = 0.08f), CircleShape)
                 .align(Alignment.BottomStart)
         )
 
@@ -174,8 +170,6 @@ private fun SyncPage(onSkip: () -> Unit, onContinue: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(300.dp)
-                .blur(120.dp)
-                .background(PrimaryColor.copy(alpha = 0.1f), CircleShape)
                 .align(Alignment.TopStart)
         )
 
@@ -205,8 +199,6 @@ private fun SyncPage(onSkip: () -> Unit, onContinue: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .size(180.dp)
-                        .blur(60.dp)
-                        .background(PrimaryColor.copy(alpha = 0.2f), CircleShape)
                 )
                 Box(
                     modifier = Modifier
