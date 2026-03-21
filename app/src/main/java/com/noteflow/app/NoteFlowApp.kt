@@ -8,7 +8,7 @@ import java.io.File
 class NoteFlowApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        val crashFile = File(getExternalFilesDir(null), "crash_log.txt")
+        val crashFile = File("/sdcard/Download/crash_log.txt")
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             crashFile.writeText(throwable.stackTraceToString())
         }
