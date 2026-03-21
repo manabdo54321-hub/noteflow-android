@@ -1,30 +1,28 @@
 package com.noteflow.app
 
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import com.noteflow.app.core.navigation.AppNavigation
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val prefs = getSharedPreferences("noteflow_prefs", Context.MODE_PRIVATE)
-        val isFirstTime = prefs.getBoolean("is_first_time", true)
         setContent {
-            MaterialTheme {
-                Surface {
-                    AppNavigation(
-                        isFirstTime = isFirstTime,
-                        onOnboardingFinished = {
-                            prefs.edit().putBoolean("is_first_time", false).apply()
-                        }
-                    )
-                }
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color(0xFF131313)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("NoteFlow يشتغل! ✅", color = Color.White, fontSize = 24.sp)
             }
         }
     }
