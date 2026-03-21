@@ -44,6 +44,17 @@ private val OnSurfaceVariant = Color(0xFFC8C5CD)
 private val OutlineVariant = Color(0xFF47464C)
 
 @Composable
+private fun SimpleDivider(color: Color, verticalPadding: Int) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = verticalPadding.dp)
+            .height(1.dp)
+            .background(color)
+    )
+}
+
+@Composable
 fun HomeScreen(
     onNoteClick: (Long) -> Unit,
     onAddNote: () -> Unit,
@@ -99,7 +110,6 @@ fun HomeScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // TopAppBar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -155,7 +165,6 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Quick Write
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -198,12 +207,10 @@ fun HomeScreen(
                     }
                 }
 
-                // Tasks + Timer
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Tasks
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -251,7 +258,6 @@ fun HomeScreen(
                         }
                     }
 
-                    // Timer
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -409,7 +415,7 @@ fun HomeScreen(
                 DrawerItem(Icons.Default.CheckCircle, "المهام") { showLeftDrawer = false; onNavigateToTasks() }
                 DrawerItem(Icons.Default.Timer, "التايمر") { showLeftDrawer = false; onNavigateToTimer() }
                 DrawerItem(Icons.Default.BarChart, "الإحصائيات") { showLeftDrawer = false; onNavigateToStats() }
-                HorizontalDivider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 8.dp))
+                SimpleDivider(color = OutlineVariant.copy(alpha = 0.3f), verticalPadding = 8)
                 Text("إضافات", fontSize = 11.sp, letterSpacing = 2.sp,
                     color = PrimaryColor, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -452,7 +458,7 @@ fun HomeScreen(
                         Text("noteflow@app.io", fontSize = 12.sp, color = OnSurfaceVariant)
                     }
                 }
-                HorizontalDivider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
+                SimpleDivider(color = OutlineVariant.copy(alpha = 0.3f), verticalPadding = 4)
                 Text("الإعدادات", fontSize = 11.sp, letterSpacing = 2.sp,
                     color = PrimaryColor, fontWeight = FontWeight.Bold)
                 DrawerItem(Icons.Default.Settings, "إعدادات التطبيق") { showRightDrawer = false; onNavigateToSettings() }
@@ -460,7 +466,7 @@ fun HomeScreen(
                 DrawerItem(Icons.Default.Notifications, "الإشعارات") { showRightDrawer = false }
                 DrawerItem(Icons.Default.Security, "الأمان") { showRightDrawer = false }
                 DrawerItem(Icons.Default.Sync, "المزامنة") { showRightDrawer = false }
-                HorizontalDivider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
+                SimpleDivider(color = OutlineVariant.copy(alpha = 0.3f), verticalPadding = 4)
                 DrawerItem(Icons.Default.Logout, "تسجيل الخروج",
                     tint = Color(0xFFFF6B6B)) { showRightDrawer = false }
             }
