@@ -31,6 +31,7 @@ import com.noteflow.app.features.stats.presentation.StatsViewModel
 import com.noteflow.app.features.tasks.domain.model.Task
 import com.noteflow.app.features.tasks.presentation.TaskViewModel
 import com.noteflow.app.features.timer.presentation.TimerViewModel
+import java.util.Calendar
 
 private val BgColor = Color(0xFF131313)
 private val SurfaceLowest = Color(0xFF0E0E0E)
@@ -79,6 +80,13 @@ fun HomeScreen(
     val timerMinutes = (timeLeft / 1000) / 60
     val timerSeconds = (timeLeft / 1000) % 60
 
+    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    val greeting = when (hour) {
+        in 5..11 -> "صباح الخير"
+        in 12..17 -> "مساء النور"
+        else -> "مساء الخير"
+    }
+
     LaunchedEffect(quickNote) {
         if (quickNote.isNotBlank()) {
             kotlinx.coroutines.delay(2000)
@@ -93,7 +101,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // ═══ TopAppBar ═══
+            // TopAppBar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -103,7 +111,6 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // الصورة + الاسم → Right Drawer
                 Row(
                     modifier = Modifier.clickable { showRightDrawer = true },
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -122,65 +129,47 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold, color = Color(0xFF1C0062))
                     }
                     Column {
-                        Text(
-                            text = "WELCOME BACK",
-                            fontSize = 10.sp,
-                            letterSpacing = 2.sp,
-                            color = OnSurface.copy(alpha = 0.5f)
-                        )
-                        Text(
-                            text = "مستخدم",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryColor
-                        )
+                        Text("WELCOME BACK", fontSize = 10.sp,
+                            letterSpacing = 2.sp, color = OnSurface.copy(alpha = 0.5f))
+                        Text(greeting, fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold, color = PrimaryColor)
                     }
                 }
 
-                // أزرار اليمين
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // الرسم البياني
                     IconButton(onClick = { onNavigateToStats() }) {
                         Icon(Icons.Default.ShowChart, contentDescription = null,
-                            tint = OnSurface.copy(alpha = 0.6f),
-                            modifier = Modifier.size(22.dp))
+                            tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
                     }
-                    // 3 شرطات → Left Drawer
                     IconButton(onClick = { showLeftDrawer = true }) {
                         Icon(Icons.Default.Menu, contentDescription = null,
-                            tint = OnSurface.copy(alpha = 0.6f),
-                            modifier = Modifier.size(22.dp))
+                            tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(22.dp))
                     }
                 }
             }
 
-            // ═══ المحتوى ═══
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-
-                // ═══ Quick Write ═══
+                // Quick Write
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 220.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(SurfaceLowest)
+                        .clickable { }
                         .padding(24.dp)
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "ابدأ الكتابة...",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = OnSurface
-                        )
+                        Text("ابدأ الكتابة...", fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold, color = OnSurface)
                         Spacer(modifier = Modifier.height(12.dp))
                         BasicTextField(
                             value = quickNote,
@@ -196,33 +185,27 @@ fun HomeScreen(
                                 .defaultMinSize(minHeight = 120.dp),
                             decorationBox = { inner ->
                                 if (quickNote.isEmpty()) {
-                                    Text(
-                                        "فكّر في مشروعك القادم...",
+                                    Text("فكّر في مشروعك القادم...",
                                         color = OnSurfaceVariant.copy(alpha = 0.4f),
-                                        fontSize = 16.sp
-                                    )
+                                        fontSize = 16.sp)
                                 }
                                 inner()
                             }
                         )
                     }
                     if (quickNote.isNotBlank()) {
-                        Text(
-                            text = "يحفظ تلقائياً...",
-                            fontSize = 10.sp,
-                            letterSpacing = 1.sp,
-                            color = OutlineVariant,
-                            modifier = Modifier.align(Alignment.TopEnd)
-                        )
+                        Text("يحفظ تلقائياً...", fontSize = 10.sp,
+                            letterSpacing = 1.sp, color = OutlineVariant,
+                            modifier = Modifier.align(Alignment.TopEnd))
                     }
                 }
 
-                // ═══ Tasks + Timer ═══
+                // Tasks + Timer
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Today's Tasks
+                    // Tasks
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -231,7 +214,6 @@ fun HomeScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Header
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -240,14 +222,9 @@ fun HomeScreen(
                             Text("اليوم", fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold, color = OnSurface)
                             Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    "${completedTasks.size} من $totalTasks",
-                                    fontSize = 10.sp,
-                                    color = PrimaryColor,
-                                    letterSpacing = 1.sp
-                                )
+                                Text("${completedTasks.size} من $totalTasks",
+                                    fontSize = 10.sp, color = PrimaryColor, letterSpacing = 1.sp)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                // Progress bar
                                 Box(
                                     modifier = Modifier
                                         .width(40.dp).height(3.dp)
@@ -258,32 +235,25 @@ fun HomeScreen(
                                         modifier = Modifier
                                             .fillMaxWidth(completionRate).height(3.dp)
                                             .clip(RoundedCornerShape(2.dp))
-                                            .background(
-                                                Brush.horizontalGradient(
-                                                    listOf(PrimaryColor, AccentColor)
-                                                )
-                                            )
+                                            .background(Brush.horizontalGradient(
+                                                listOf(PrimaryColor, AccentColor)))
                                     )
                                 }
                             }
                         }
 
-                        // Tasks
                         val displayTasks = (activeTasks.take(2) + completedTasks.take(2)).take(4)
                         if (displayTasks.isEmpty()) {
-                            Text("لا توجد مهام ✨",
-                                color = OnSurfaceVariant, fontSize = 13.sp)
+                            Text("لا توجد مهام ✨", color = OnSurfaceVariant, fontSize = 13.sp)
                         } else {
                             displayTasks.forEach { task ->
-                                TaskRow(
-                                    task = task,
-                                    onToggle = { taskViewModel.toggleComplete(task) }
-                                )
+                                TaskRow(task = task,
+                                    onToggle = { taskViewModel.toggleComplete(task) })
                             }
                         }
                     }
 
-                    // Focus Timer
+                    // Timer
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -294,20 +264,16 @@ fun HomeScreen(
                     ) {
                         Text("تايمر التركيز", fontSize = 16.sp,
                             fontWeight = FontWeight.Bold, color = OnSurface)
-                        Text(
-                            "جلسة بومودورو: %02d:%02d".format(timerMinutes, timerSeconds),
-                            fontSize = 11.sp, color = OutlineVariant
-                        )
+                        Text("جلسة: %02d:%02d".format(timerMinutes, timerSeconds),
+                            fontSize = 11.sp, color = OutlineVariant)
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Timer Row — نص على اليسار، دايرة على اليمين
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // زرار Start
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
@@ -329,13 +295,10 @@ fun HomeScreen(
                                 )
                                 Text(
                                     if (isRunning) "إيقاف" else "ابدأ",
-                                    fontSize = 11.sp,
-                                    color = TertiaryColor,
-                                    letterSpacing = 1.sp
+                                    fontSize = 11.sp, color = TertiaryColor, letterSpacing = 1.sp
                                 )
                             }
 
-                            // الدايرة على اليمين
                             Box(
                                 modifier = Modifier.size(80.dp),
                                 contentAlignment = Alignment.Center
@@ -351,12 +314,9 @@ fun HomeScreen(
                                         useCenter = false,
                                         style = androidx.compose.ui.graphics.drawscope.Stroke(
                                             width = strokeWidth,
-                                            cap = androidx.compose.ui.graphics.StrokeCap.Round
-                                        ),
-                                        topLeft = androidx.compose.ui.geometry.Offset(
-                                            strokeWidth, strokeWidth),
-                                        size = androidx.compose.ui.geometry.Size(
-                                            radius * 2, radius * 2)
+                                            cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth),
+                                        size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
                                     )
                                     drawArc(
                                         color = TertiaryColor,
@@ -365,20 +325,13 @@ fun HomeScreen(
                                         useCenter = false,
                                         style = androidx.compose.ui.graphics.drawscope.Stroke(
                                             width = strokeWidth,
-                                            cap = androidx.compose.ui.graphics.StrokeCap.Round
-                                        ),
-                                        topLeft = androidx.compose.ui.geometry.Offset(
-                                            strokeWidth, strokeWidth),
-                                        size = androidx.compose.ui.geometry.Size(
-                                            radius * 2, radius * 2)
+                                            cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth),
+                                        size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
                                     )
                                 }
-                                Text(
-                                    "%02d:%02d".format(timerMinutes, timerSeconds),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = OnSurface
-                                )
+                                Text("%02d:%02d".format(timerMinutes, timerSeconds),
+                                    fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnSurface)
                             }
                         }
                     }
@@ -388,11 +341,9 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(120.dp))
         }
 
-        // ═══ Bottom Navigation — Floating Pill ═══
+        // Bottom Navigation
         Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -402,47 +353,33 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // القلم البنفسجي — Active
                 Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(listOf(PrimaryColor, AccentColor))
-                        )
+                    modifier = Modifier.size(52.dp).clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
                         .clickable { onAddNote() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.EditNote, contentDescription = null,
                         tint = Color(0xFF131313), modifier = Modifier.size(26.dp))
                 }
-                // البرق
                 Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
+                    modifier = Modifier.size(52.dp).clip(CircleShape)
                         .clickable { onNavigateToTasks() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Bolt, contentDescription = null,
                         tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
                 }
-                // العدسة
                 Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
+                    modifier = Modifier.size(52.dp).clip(CircleShape)
                         .clickable { onNavigateToSearch() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Search, contentDescription = null,
                         tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
                 }
-                // الترس
                 Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
+                    modifier = Modifier.size(52.dp).clip(CircleShape)
                         .clickable { onNavigateToSettings() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -452,45 +389,31 @@ fun HomeScreen(
             }
         }
 
-        // ═══ Left Drawer ═══
+        // Left Drawer
         if (showLeftDrawer) {
-            Box(
-                modifier = Modifier.fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .clickable { showLeftDrawer = false }
-            )
+            Box(modifier = Modifier.fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .clickable { showLeftDrawer = false })
             Column(
                 modifier = Modifier
-                    .fillMaxHeight()
-                    .width(280.dp)
+                    .fillMaxHeight().width(280.dp)
                     .align(Alignment.CenterStart)
                     .background(Color(0xFF1C1B1B))
                     .statusBarsPadding()
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text("الأدوات", fontSize = 11.sp,
-                    letterSpacing = 2.sp, color = PrimaryColor,
-                    fontWeight = FontWeight.Bold)
+                Text("الأدوات", fontSize = 11.sp, letterSpacing = 2.sp,
+                    color = PrimaryColor, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 DrawerItem(Icons.Default.Home, "الرئيسية") { showLeftDrawer = false }
-                DrawerItem(Icons.Default.Notes, "الملاحظات") {
-                    showLeftDrawer = false; onNavigateToNotes()
-                }
-                DrawerItem(Icons.Default.CheckCircle, "المهام") {
-                    showLeftDrawer = false; onNavigateToTasks()
-                }
-                DrawerItem(Icons.Default.Timer, "التايمر") {
-                    showLeftDrawer = false; onNavigateToTimer()
-                }
-                DrawerItem(Icons.Default.BarChart, "الإحصائيات") {
-                    showLeftDrawer = false; onNavigateToStats()
-                }
-                Divider(color = OutlineVariant.copy(alpha = 0.3f),
-                    modifier = Modifier.padding(vertical = 8.dp))
-                Text("إضافات", fontSize = 11.sp,
-                    letterSpacing = 2.sp, color = PrimaryColor,
-                    fontWeight = FontWeight.Bold)
+                DrawerItem(Icons.Default.Notes, "الملاحظات") { showLeftDrawer = false; onNavigateToNotes() }
+                DrawerItem(Icons.Default.CheckCircle, "المهام") { showLeftDrawer = false; onNavigateToTasks() }
+                DrawerItem(Icons.Default.Timer, "التايمر") { showLeftDrawer = false; onNavigateToTimer() }
+                DrawerItem(Icons.Default.BarChart, "الإحصائيات") { showLeftDrawer = false; onNavigateToStats() }
+                Divider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 8.dp))
+                Text("إضافات", fontSize = 11.sp, letterSpacing = 2.sp,
+                    color = PrimaryColor, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 DrawerItem(Icons.Default.AccountTree, "خريطة الروابط") { showLeftDrawer = false }
                 DrawerItem(Icons.Default.Tag, "الوسوم") { showLeftDrawer = false }
@@ -499,60 +422,47 @@ fun HomeScreen(
             }
         }
 
-        // ═══ Right Drawer ═══
+        // Right Drawer
         if (showRightDrawer) {
-            Box(
-                modifier = Modifier.fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .clickable { showRightDrawer = false }
-            )
+            Box(modifier = Modifier.fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .clickable { showRightDrawer = false })
             Column(
                 modifier = Modifier
-                    .fillMaxHeight()
-                    .width(280.dp)
+                    .fillMaxHeight().width(280.dp)
                     .align(Alignment.CenterEnd)
                     .background(Color(0xFF1C1B1B))
                     .statusBarsPadding()
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Profile
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(52.dp).clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(listOf(PrimaryColor, AccentColor))
-                            ),
+                        modifier = Modifier.size(52.dp).clip(CircleShape)
+                            .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor))),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("م", fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold, color = Color(0xFF1C0062))
+                        Text("م", fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1C0062))
                     }
                     Column {
-                        Text("مستخدم NoteFlow",
-                            fontWeight = FontWeight.Bold, color = OnSurface, fontSize = 15.sp)
-                        Text("noteflow@app.io",
-                            fontSize = 12.sp, color = OnSurfaceVariant)
+                        Text("مستخدم NoteFlow", fontWeight = FontWeight.Bold,
+                            color = OnSurface, fontSize = 15.sp)
+                        Text("noteflow@app.io", fontSize = 12.sp, color = OnSurfaceVariant)
                     }
                 }
-                Divider(color = OutlineVariant.copy(alpha = 0.3f),
-                    modifier = Modifier.padding(vertical = 4.dp))
-                Text("الإعدادات", fontSize = 11.sp,
-                    letterSpacing = 2.sp, color = PrimaryColor,
-                    fontWeight = FontWeight.Bold)
-                DrawerItem(Icons.Default.Settings, "إعدادات التطبيق") {
-                    showRightDrawer = false; onNavigateToSettings()
-                }
+                Divider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
+                Text("الإعدادات", fontSize = 11.sp, letterSpacing = 2.sp,
+                    color = PrimaryColor, fontWeight = FontWeight.Bold)
+                DrawerItem(Icons.Default.Settings, "إعدادات التطبيق") { showRightDrawer = false; onNavigateToSettings() }
                 DrawerItem(Icons.Default.Palette, "المظهر والألوان") { showRightDrawer = false }
                 DrawerItem(Icons.Default.Notifications, "الإشعارات") { showRightDrawer = false }
                 DrawerItem(Icons.Default.Security, "الأمان") { showRightDrawer = false }
                 DrawerItem(Icons.Default.Sync, "المزامنة") { showRightDrawer = false }
-                Divider(color = OutlineVariant.copy(alpha = 0.3f),
-                    modifier = Modifier.padding(vertical = 4.dp))
+                Divider(color = OutlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
                 DrawerItem(Icons.Default.Logout, "تسجيل الخروج",
                     tint = Color(0xFFFF6B6B)) { showRightDrawer = false }
             }
@@ -576,11 +486,8 @@ private fun DrawerItem(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null,
-            tint = tint, modifier = Modifier.size(20.dp))
-        Text(label,
-            color = if (tint == OnSurfaceVariant) OnSurface else tint,
-            fontSize = 15.sp)
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        Text(label, color = if (tint == OnSurfaceVariant) OnSurface else tint, fontSize = 15.sp)
     }
 }
 
@@ -591,7 +498,6 @@ private fun TaskRow(task: Task, onToggle: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // مربع checkbox زي الصورة
         Box(
             modifier = Modifier
                 .size(20.dp)
