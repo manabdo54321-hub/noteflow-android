@@ -1,5 +1,13 @@
 package com.noteflow.app.features.timer.presentation.screens
 
+import android.app.NotificationManager
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +32,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -70,6 +79,7 @@ fun TimerScreen(
     val completedSessions by timerViewModel.completedSessions.collectAsState()
     val sessionFinished by timerViewModel.sessionFinished.collectAsState()
     val tasks by taskViewModel.tasks.collectAsState()
+    val context = LocalContext.current
 
     var selectedTaskId by remember { mutableStateOf<Long?>(null) }
     var showTaskPicker by remember { mutableStateOf(false) }
@@ -78,15 +88,22 @@ fun TimerScreen(
     var showNoiseSheet by remember { mutableStateOf(false) }
     var showTimerModeSheet by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var showStrictModeSheet by remember { mutableStateOf(false) }
     var selectedNoise by remember { mutableStateOf<String?>(null) }
     var isCountingUp by remember { mutableStateOf(false) }
     var countUpSeconds by remember { mutableStateOf(0L) }
     var selectedHours by remember { mutableStateOf(0) }
     var selectedMinutes by remember { mutableStateOf(25) }
+    var strictFlipPhone by remember { mutableStateOf(false) }
+    var strictDnd by remember { mutableStateOf(false) }
+    var strictNoExit by remember { mutableStateOf(false) }
+    var showFlipWarning by remember { mutableStateOf(false) }
+    var isPhoneFaceDown by remember { mutableStateOf(false) }
 
     val selectedTaskName = tasks.find { it.id == selectedTaskId }?.title
+    val customDuration by timerViewModel.customDuration.collectAsState()
     val totalDuration = if (isCountingUp) (countUpSeconds * 1000L).coerceAtLeast(1L)
-        else if (isWorkSession) timerViewModel.customDuration.collectAsState().value
+        else if (isWorkSession) customDuration
         else if (completedSessions % 4 == 0 && completedSessions > 0) TimerViewModel.LONG_BREAK_DURATION
         else TimerViewModel.BREAK_DURATION
     val progress = if (isCountingUp) {
@@ -97,16 +114,54 @@ fun TimerScreen(
     val seconds = if (isCountingUp) countUpSeconds % 60 else (timeLeft / 1000) % 60
     val motivationalMsg = remember(completedSessions) { motivationalMessages[completedSessions % motivationalMessages.size] }
 
+    // Accelerometer للـ flip detection
+    DisposableEffect(strictFlipPhone, isRunning) {
+        if (!strictFlipPhone || !isRunning) return@DisposableEffect onDispose {}
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                val z = event.values[2]
+                val faceDown = z < -5f
+                if (isPhoneFaceDown && !faceDown) {
+                    showFlipWarning = true
+                    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                    vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 300, 100, 300), -1))
+                }
+                isPhoneFaceDown = faceDown
+            }
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+        sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)
+        onDispose { sensorManager.unregisterListener(listener) }
+    }
+
+    // DND
+    LaunchedEffect(strictDnd, isRunning) {
+        if (strictDnd && isRunning) {
+            try {
+                val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                if (nm.isNotificationPolicyAccessGranted) {
+                    nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+                }
+            } catch (e: Exception) {}
+        } else if (!isRunning) {
+            try {
+                val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                if (nm.isNotificationPolicyAccessGranted) {
+                    nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+                }
+            } catch (e: Exception) {}
+        }
+    }
+
     LaunchedEffect(isRunning, isCountingUp) {
         if (isRunning && isCountingUp) {
             while (isRunning) {
                 kotlinx.coroutines.delay(1000)
                 countUpSeconds++
                 val target = selectedHours * 3600L + selectedMinutes * 60L
-                if (target > 0 && countUpSeconds >= target) {
-                    timerViewModel.pause()
-                    break
-                }
+                if (target > 0 && countUpSeconds >= target) { timerViewModel.pause(); break }
             }
         }
     }
@@ -120,37 +175,141 @@ fun TimerScreen(
             TimerTopBar(onBack = onBack)
             TimerTaskSelector(selectedTaskName, isRunning) { showTaskPicker = true }
             Spacer(modifier = Modifier.height(12.dp))
-            TimerCircleDisplay(minutes, seconds, progress, isWorkSession, completedSessions,
-                isRunning = isRunning, isCountingUp = isCountingUp,
-                onTimePickerClick = { if (!isRunning) showTimePicker = true })
+            TimerCircleDisplay(minutes, seconds, progress, isWorkSession, completedSessions, isRunning, isCountingUp) { if (!isRunning) showTimePicker = true }
             Spacer(modifier = Modifier.height(8.dp))
             TimerMotivationText(motivationalMsg, isWorkSession)
+            if (strictFlipPhone && isRunning && !isPhoneFaceDown) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("📱 اقلب هاتفك للتركيز!", fontSize = 13.sp, color = Color(0xFFFF6B6B),
+                    modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
             Spacer(modifier = Modifier.height(20.dp))
-            TimerMainControls(
-                isRunning = isRunning, isWorkSession = isWorkSession,
-                onStart = { timerViewModel.setTask(selectedTaskId); if (!isCountingUp) timerViewModel.start() else { timerViewModel.setTask(selectedTaskId); timerViewModel.start() } },
+            TimerMainControls(isRunning, isWorkSession,
+                onStart = { timerViewModel.setTask(selectedTaskId); timerViewModel.start() },
                 onPause = { timerViewModel.pause() },
                 onStop = { showStopConfirm = true },
-                onSkip = { showSkipConfirm = true }
-            )
+                onSkip = { showSkipConfirm = true })
             Spacer(modifier = Modifier.weight(1f))
-            TimerBottomToolbar(selectedNoise, isCountingUp,
-                { showNoiseSheet = true }, { showTimerModeSheet = true })
+            TimerBottomToolbar(selectedNoise, isCountingUp, strictFlipPhone || strictDnd || strictNoExit,
+                { showNoiseSheet = true }, { showTimerModeSheet = true }, { showStrictModeSheet = true })
         }
 
-        if (showTaskPicker) TimerTaskPickerDialog(tasks.filter { !it.isCompleted }, selectedTaskId,
-            { selectedTaskId = it; showTaskPicker = false }, { showTaskPicker = false })
-        if (showStopConfirm) TimerConfirmDialog("إيقاف الجلسة؟", "هل أنت متأكد؟ سيتم إلغاء التقدم",
-            "إيقاف", "تابع التركيز",
-            { timerViewModel.reset(); countUpSeconds = 0; showStopConfirm = false }, { showStopConfirm = false })
-        if (showSkipConfirm) TimerConfirmDialog("تخطي الجلسة؟", "هل أنت متأكد من التخطي؟",
-            "تخطي", "إلغاء",
-            { timerViewModel.skipSession(); countUpSeconds = 0; showSkipConfirm = false }, { showSkipConfirm = false })
+        if (showFlipWarning) {
+            AlertDialog(onDismissRequest = { showFlipWarning = false }, containerColor = SurfaceColor,
+                title = { Text("⚠️ تحذير!", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold) },
+                text = { Text("لقد رفعت هاتفك! أعد قلبه للاستمرار في التركيز", color = OnSurfaceVariant) },
+                confirmButton = { TextButton(onClick = { showFlipWarning = false }) { Text("سأعود للتركيز", color = PrimaryColor) } },
+                dismissButton = { TextButton(onClick = { timerViewModel.pause(); showFlipWarning = false }) { Text("إيقاف", color = Color(0xFFFF6B6B)) } }
+            )
+        }
+
+        if (showTaskPicker) TimerTaskPickerDialog(tasks.filter { !it.isCompleted }, selectedTaskId, { selectedTaskId = it; showTaskPicker = false }, { showTaskPicker = false })
+        if (showStopConfirm) TimerConfirmDialog("إيقاف الجلسة؟", "هل أنت متأكد؟ سيتم إلغاء التقدم", "إيقاف", "تابع التركيز", { timerViewModel.reset(); countUpSeconds = 0; showStopConfirm = false }, { showStopConfirm = false })
+        if (showSkipConfirm) TimerConfirmDialog("تخطي الجلسة؟", "هل أنت متأكد من التخطي؟", "تخطي", "إلغاء", { timerViewModel.skipSession(); countUpSeconds = 0; showSkipConfirm = false }, { showSkipConfirm = false })
         if (showNoiseSheet) TimerNoiseBottomSheet(selectedNoise, { selectedNoise = it; showNoiseSheet = false }, { showNoiseSheet = false })
         if (showTimerModeSheet) TimerModeBottomSheet(isCountingUp, { isCountingUp = it; countUpSeconds = 0; showTimerModeSheet = false }, { showTimerModeSheet = false })
-        if (showTimePicker) TimerTimePickerDialog(selectedHours, selectedMinutes,
-            { h, m -> selectedHours = h; selectedMinutes = m; timerViewModel.setCustomDuration(h, m); showTimePicker = false },
-            { showTimePicker = false })
+        if (showTimePicker) TimerTimePickerDialog(selectedHours, selectedMinutes, { h, m -> selectedHours = h; selectedMinutes = m; timerViewModel.setCustomDuration(h, m); showTimePicker = false }, { showTimePicker = false })
+        if (showStrictModeSheet) StrictModeSheet(
+            flipPhone = strictFlipPhone, dnd = strictDnd, noExit = strictNoExit,
+            onFlipChange = { strictFlipPhone = it }, onDndChange = { strictDnd = it }, onNoExitChange = { strictNoExit = it },
+            onDismiss = { showStrictModeSheet = false }
+        )
+    }
+}
+
+@Composable
+private fun StrictModeSheet(
+    flipPhone: Boolean, dnd: Boolean, noExit: Boolean,
+    onFlipChange: (Boolean) -> Unit, onDndChange: (Boolean) -> Unit, onNoExitChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val dndGranted = remember {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.isNotificationPolicyAccessGranted
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceColor,
+        title = { Text("الوضع الصارم", color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                StrictModeItem(
+                    icon = Icons.Default.ScreenLockRotation,
+                    title = "اقلب الهاتف",
+                    subtitle = "ضع الشاشة لأسفل للتركيز",
+                    isAvailable = true,
+                    isEnabled = flipPhone,
+                    onToggle = { onFlipChange(it) }
+                )
+                StrictModeItem(
+                    icon = Icons.Default.NotificationsOff,
+                    title = "حظر الإشعارات",
+                    subtitle = if (dndGranted) "وضع عدم الإزعاج" else "⚠️ الأذونات (0/1)",
+                    isAvailable = dndGranted,
+                    isEnabled = dnd,
+                    onToggle = { onDndChange(it) }
+                )
+                StrictModeItem(
+                    icon = Icons.Default.Block,
+                    title = "منع الخروج",
+                    subtitle = "تحذير عند محاولة الخروج",
+                    isAvailable = true,
+                    isEnabled = noExit,
+                    onToggle = { onNoExitChange(it) }
+                )
+                StrictModeItem(
+                    icon = Icons.Default.PhoneLocked,
+                    title = "قفل الهاتف",
+                    subtitle = "⚠️ غير متاح — يحتاج صلاحيات خاصة",
+                    isAvailable = false,
+                    isEnabled = false,
+                    onToggle = {}
+                )
+                StrictModeItem(
+                    icon = Icons.Default.AppBlocking,
+                    title = "حظر التطبيقات",
+                    subtitle = "⚠️ غير متاح — يحتاج صلاحيات خاصة",
+                    isAvailable = false,
+                    isEnabled = false,
+                    onToggle = {}
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("تأكيد", color = PrimaryColor, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = {
+                onFlipChange(false); onDndChange(false); onNoExitChange(false); onDismiss()
+            }) { Text("إلغاء", color = OnSurfaceVariant) }
+        }
+    )
+}
+
+@Composable
+private fun StrictModeItem(icon: ImageVector, title: String, subtitle: String, isAvailable: Boolean, isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+        .background(if (isEnabled) PrimaryColor.copy(alpha = 0.08f) else SurfaceHigh)
+        .padding(12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Icon(icon, contentDescription = null,
+                tint = if (!isAvailable) OutlineVariant else if (isEnabled) PrimaryColor else OnSurfaceVariant,
+                modifier = Modifier.size(22.dp))
+            Column {
+                Text(title, fontSize = 14.sp, color = if (!isAvailable) OutlineVariant else OnSurface)
+                Text(subtitle, fontSize = 11.sp, color = if (subtitle.startsWith("⚠️")) Color(0xFFFF6B6B).copy(alpha = 0.8f) else OnSurfaceVariant)
+            }
+        }
+        if (isAvailable) {
+            Switch(checked = isEnabled, onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF1C0062), checkedTrackColor = PrimaryColor,
+                    uncheckedThumbColor = OnSurfaceVariant, uncheckedTrackColor = OutlineVariant.copy(alpha = 0.3f)))
+        }
     }
 }
 
@@ -208,7 +367,7 @@ private fun TimerCircleDisplay(minutes: Long, seconds: Long, progress: Float, is
                 }
                 Text(if (isWorkSession) "جلسة تركيز" else if (completedSessions % 4 == 0 && completedSessions > 0) "استراحة كبيرة 🌿" else "استراحة قصيرة 🌿",
                     fontSize = 11.sp, letterSpacing = 2.sp, color = OnSurfaceVariant)
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     repeat(4) { index ->
                         Box(modifier = Modifier.size(if (index == completedSessions % 4) 10.dp else 7.dp).clip(CircleShape)
@@ -216,7 +375,7 @@ private fun TimerCircleDisplay(minutes: Long, seconds: Long, progress: Float, is
                     }
                 }
                 Text("الجلسة ${(completedSessions % 4) + 1} من 4", fontSize = 10.sp, letterSpacing = 1.sp, color = OutlineVariant)
-                if (!isRunning) Text("اضغط على الوقت لتغييره", fontSize = 10.sp, color = OutlineVariant.copy(alpha = 0.6f))
+                if (!isRunning) Text("اضغط على الوقت لتغييره", fontSize = 10.sp, color = OutlineVariant.copy(alpha = 0.5f))
             }
         }
     }
@@ -229,9 +388,8 @@ private fun TimerMotivationText(message: String, isWorkSession: Boolean) {
             initialValue = 0.4f, targetValue = 1f,
             animationSpec = infiniteRepeatable(tween(4000), RepeatMode.Reverse), label = "alpha"
         )
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("تنفس بعمق...", fontSize = 13.sp, color = TertiaryColor.copy(alpha = breathAlpha))
-        }
+        Text("تنفس بعمق...", fontSize = 13.sp, color = TertiaryColor.copy(alpha = breathAlpha),
+            modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
     } else {
         Text(message, fontSize = 13.sp, color = OnSurfaceVariant.copy(alpha = 0.7f),
             modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
@@ -239,31 +397,24 @@ private fun TimerMotivationText(message: String, isWorkSession: Boolean) {
 }
 
 @Composable
-private fun TimerMainControls(isRunning: Boolean, isWorkSession: Boolean,
-    onStart: () -> Unit, onPause: () -> Unit, onStop: () -> Unit, onSkip: () -> Unit) {
+private fun TimerMainControls(isRunning: Boolean, isWorkSession: Boolean, onStart: () -> Unit, onPause: () -> Unit, onStop: () -> Unit, onSkip: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(modifier = Modifier.size(220.dp, 56.dp).clip(RoundedCornerShape(50.dp))
             .background(if (isRunning) SurfaceColor else Color.White)
-            .clickable { if (isRunning) onPause() else onStart() },
-            contentAlignment = Alignment.Center) {
+            .clickable { if (isRunning) onPause() else onStart() }, contentAlignment = Alignment.Center) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    tint = if (isRunning) OnSurface else Color(0xFF131313),
-                    modifier = Modifier.size(22.dp))
+                Icon(if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null,
+                    tint = if (isRunning) OnSurface else Color(0xFF131313), modifier = Modifier.size(22.dp))
                 Text(if (isRunning) "إيقاف مؤقت" else if (isWorkSession) "ابدأ التركيز" else "ابدأ الاستراحة",
-                    fontSize = 15.sp, fontWeight = FontWeight.Bold,
-                    color = if (isRunning) OnSurface else Color(0xFF131313))
+                    fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (isRunning) OnSurface else Color(0xFF131313))
             }
         }
         if (isRunning) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(SurfaceHigh)
-                    .clickable { onStop() }.padding(horizontal = 24.dp, vertical = 10.dp)) {
+                Box(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(SurfaceHigh).clickable { onStop() }.padding(horizontal = 24.dp, vertical = 10.dp)) {
                     Text("إيقاف", fontSize = 13.sp, color = Color(0xFFFF6B6B))
                 }
-                Box(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(SurfaceHigh)
-                    .clickable { onSkip() }.padding(horizontal = 24.dp, vertical = 10.dp)) {
+                Box(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(SurfaceHigh).clickable { onSkip() }.padding(horizontal = 24.dp, vertical = 10.dp)) {
                     Text("تخطي ⏭", fontSize = 13.sp, color = OnSurfaceVariant)
                 }
             }
@@ -272,12 +423,13 @@ private fun TimerMainControls(isRunning: Boolean, isWorkSession: Boolean,
 }
 
 @Composable
-private fun TimerBottomToolbar(selectedNoise: String?, isCountingUp: Boolean, onNoiseClick: () -> Unit, onModeClick: () -> Unit) {
+private fun TimerBottomToolbar(selectedNoise: String?, isCountingUp: Boolean, isStrictActive: Boolean,
+    onNoiseClick: () -> Unit, onModeClick: () -> Unit, onStrictClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().background(SurfaceColor).padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
         TimerToolBtn(Icons.Default.MusicNote, selectedNoise ?: "ضوضاء بيضاء", selectedNoise != null, onNoiseClick)
         TimerToolBtn(Icons.Default.Timer, if (isCountingUp) "تصاعدي" else "تنازلي", isCountingUp, onModeClick)
-        TimerToolBtn(Icons.Default.SelfImprovement, "الوضع الصارم", false) {}
+        TimerToolBtn(Icons.Default.SelfImprovement, "الوضع الصارم", isStrictActive, onStrictClick)
     }
 }
 
@@ -294,18 +446,17 @@ private fun TimerToolBtn(icon: ImageVector, label: String, isActive: Boolean, on
 private fun TimerTimePickerDialog(initialHours: Int, initialMinutes: Int, onConfirm: (Int, Int) -> Unit, onDismiss: () -> Unit) {
     var hours by remember { mutableStateOf(initialHours) }
     var minutes by remember { mutableStateOf(initialMinutes) }
-
     AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceColor,
         title = { Text("اختار الوقت", color = Color.White, fontWeight = FontWeight.Bold) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("اسحب لأعلى أو لأسفل لتغيير الوقت", fontSize = 12.sp, color = OnSurfaceVariant, textAlign = TextAlign.Center)
+                Text("اسحب لأعلى أو لأسفل", fontSize = 12.sp, color = OnSurfaceVariant, textAlign = TextAlign.Center)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    TimeScrollPicker(value = hours, maxValue = 23, label = "ساعة") { hours = it }
+                    TimeScrollPicker(hours, 23, "ساعة") { hours = it }
                     Text(":", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = PrimaryColor)
-                    TimeScrollPicker(value = minutes, maxValue = 59, label = "دقيقة") { minutes = it }
+                    TimeScrollPicker(minutes, 59, "دقيقة") { minutes = it }
                 }
-                Text("الوقت المحدد: %02d:%02d".format(hours, minutes), fontSize = 13.sp, color = PrimaryColor)
+                Text("الوقت: %02d:%02d".format(hours, minutes), fontSize = 13.sp, color = PrimaryColor)
             }
         },
         confirmButton = { TextButton(onClick = { if (hours > 0 || minutes > 0) onConfirm(hours, minutes) }) { Text("تأكيد", color = PrimaryColor, fontWeight = FontWeight.Bold) } },
@@ -320,18 +471,12 @@ private fun TimeScrollPicker(value: Int, maxValue: Int, label: String, onValueCh
         Text(label, fontSize = 10.sp, color = OutlineVariant, letterSpacing = 1.sp)
         Box(modifier = Modifier.size(72.dp, 120.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceHigh)
             .pointerInput(value) {
-                detectVerticalDragGestures(
-                    onDragEnd = { dragAccumulator = 0f },
+                detectVerticalDragGestures(onDragEnd = { dragAccumulator = 0f },
                     onVerticalDrag = { _, dragAmount ->
                         dragAccumulator += dragAmount
                         val steps = (dragAccumulator / 40).toInt()
-                        if (steps != 0) {
-                            val newVal = (value - steps).coerceIn(0, maxValue)
-                            onValueChange(newVal)
-                            dragAccumulator -= steps * 40f
-                        }
-                    }
-                )
+                        if (steps != 0) { val newVal = (value - steps).coerceIn(0, maxValue); onValueChange(newVal); dragAccumulator -= steps * 40f }
+                    })
             }, contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("%02d".format((value - 1).coerceAtLeast(0)), fontSize = 18.sp, color = OutlineVariant)
@@ -391,8 +536,7 @@ private fun TimerNoiseBottomSheet(selectedNoise: String?, onSelect: (String?) ->
         if (selectedNoise != null) {
             Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFFF6B6B).copy(alpha = 0.1f)).clickable { onSelect(null) }.padding(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("🔕", fontSize = 20.sp)
-                Text("إيقاف الصوت", color = Color(0xFFFF6B6B), fontSize = 14.sp)
+                Text("🔕", fontSize = 20.sp); Text("إيقاف الصوت", color = Color(0xFFFF6B6B), fontSize = 14.sp)
             }
         }
         whiteNoiseSounds.forEach { (emoji, name) ->
