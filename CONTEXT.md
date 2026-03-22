@@ -30,29 +30,30 @@
 - لا تستخدم parent="android:Theme.DeviceDefault" — بيعمل crash على Android 11
 
 ## قواعد Android 11 — لازم تتبعها دايماً
-1. **VerifyError** — لو HomeScreen أو أي Composable function كبيرة جداً (أكتر من ~200 سطر من الـ UI logic في function واحدة) هتعمل crash على Android 11 بسبب تجاوز حد الـ registers في الـ bytecode
-   - **الحل:** قسّم كل Composable كبيرة لـ functions أصغر (زي ما عملنا في HomeScreen)
-   - **HomeScreen اتقسمت لـ:** HomeTopBar, HomeQuickWrite, HomeCardsRow, HomeTasksCard, HomeTimerCard, HomeBottomNav, HomeLeftDrawer, HomeRightDrawer
+1. **VerifyError** — أي Composable function أكبر من ~150 سطر UI logic هتعمل crash على Android 11
+   - **الحل:** قسّم كل شاشة لـ composables أصغر
+   - **الشاشات اللي اتقسمت فعلاً:**
+     - HomeScreen → HomeTopBar, HomeQuickWrite, HomeCardsRow, HomeTasksCard, HomeTimerCard, HomeBottomNav, HomeLeftDrawer, HomeRightDrawer
+     - NoteDetailScreen → NoteDetailTopBar, NoteDetailTitle, NoteDetailTags, NoteDetailContentField, NoteDetailBacklinksHeader, NoteDetailBacklinkItem, NoteDetailBottomToolbar, NoteDetailDeleteDialog, ReadModeContent
+     - TaskListScreen → TaskListHeader, TaskListTitle, TaskListTabs, TaskSectionLabel, TaskAddEditDialog, TaskNotePickerDialog, TaskDeleteDialog, TaskCard
+     - StatsScreen → StatsHeader, StatsTitle, StatsCompletionCard, StatsFocusCard, StatsNotesCard, StatsFocusDistributionCard, StatsOverviewCard, StatsVersionFooter
+     - SettingsScreen → SettingsHeader, SettingsSectionLabel, SettingsProfileCard, SettingsThemeCard, SettingsFunctionalCard, SettingsSystemCard, SettingsVersionFooter, SettingsToggleRow, SettingsArrowRow, SettingsDivider
 
-2. **Modifier.blur()** — مش موجود على Android 11 (API 30)، بيعمل crash فوري
-   - **الحل:** لا تستخدمه خالص، استخدم alpha أو background بدل منه
+2. **Modifier.blur()** — مش موجود على Android 11، بيعمل crash فوري — لا تستخدمه
 
-3. **CompositingStrategy.Offscreen** — API 31+ فقط، مش شغال على Android 11
-   - **الحل:** لا تستخدمه
+3. **CompositingStrategy.Offscreen** — API 31+ فقط — لا تستخدمه
 
-4. **Compose BOM 2024+** — بيستخدم داخلياً APIs مش موجودة في Android 11
-   - **الحل:** ابقى على BOM 2023.08.00
+4. **Compose BOM 2024+** — بيستخدم داخلياً APIs مش موجودة في Android 11 — ابقى على 2023.08.00
 
-5. **jvmTarget = "17"** — بيعمل VerifyError على Android 11
-   - **الحل:** استخدم jvmTarget = "11" دايماً
+5. **jvmTarget = "17"** — بيعمل VerifyError على Android 11 — استخدم "11" دايماً
 
 ## قواعد الكود العامة
 - ملف واحد في كل مرة
 - الألوان: BgColor=#131313, SurfaceColor=#1C1B1B, PrimaryColor=#CABEFF, AccentColor=#8A70FF
-- استخدم SimpleDivider (custom Box) مش Divider() ولا HorizontalDivider()
+- استخدم SimpleDivider أو SettingsDivider (custom Box) مش Divider() ولا HorizontalDivider()
 - لو في تعديل على ملف قديم، ابعت محتواه الأول
 - commit بعد كل ملف شغال
-- أي Composable function أكبر من 150 سطر — قسّمها لـ functions أصغر
+- أي Composable function أكبر من 150 سطر — قسّمها فوراً
 
 ## هيكل التطبيق
 - **5 Tabs:** الرئيسية / ملاحظات / إضافة / مهام / إحصائيات
@@ -63,17 +64,11 @@
 ## الملفات الموجودة
 
 ### Base
-- settings.gradle.kts
-- build.gradle.kts
-- gradle/wrapper/gradle-wrapper.properties
-- gradle/wrapper/gradle-wrapper.jar
-- gradle.properties
-- gradlew
+- settings.gradle.kts / build.gradle.kts / gradle.properties / gradlew
 - app/build.gradle.kts
 - .github/workflows/build.yml
 - app/src/main/AndroidManifest.xml
 - app/src/main/res/values/themes.xml
-- app/src/main/res/drawable/ic_splash.xml
 - app/src/main/java/com/noteflow/app/MainActivity.kt
 - app/src/main/java/com/noteflow/app/NoteFlowApp.kt
 
@@ -82,12 +77,8 @@
 - app/src/main/java/com/noteflow/app/core/di/AppModule.kt
 - app/src/main/java/com/noteflow/app/core/navigation/AppNavigation.kt
 
-### Intro & Onboarding
-- app/src/main/java/com/noteflow/app/features/intro/presentation/IntroScreen.kt
-- app/src/main/java/com/noteflow/app/features/intro/presentation/OnboardingScreen.kt
-
 ### الرئيسية
-- app/src/main/java/com/noteflow/app/features/home/presentation/HomeScreen.kt
+- app/src/main/java/com/noteflow/app/features/home/presentation/HomeScreen.kt ✅ مقسّمة
 
 ### الملاحظات
 - app/src/main/java/com/noteflow/app/features/notes/domain/model/Note.kt
@@ -98,7 +89,7 @@
 - app/src/main/java/com/noteflow/app/features/notes/domain/usecase/SaveNoteUseCase.kt
 - app/src/main/java/com/noteflow/app/features/notes/presentation/NoteViewModel.kt
 - app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteListScreen.kt
-- app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteDetailScreen.kt
+- app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteDetailScreen.kt ✅ مقسّمة
 
 ### المهام
 - app/src/main/java/com/noteflow/app/features/tasks/domain/model/Task.kt
@@ -106,7 +97,7 @@
 - app/src/main/java/com/noteflow/app/features/tasks/data/local/TaskDao.kt
 - app/src/main/java/com/noteflow/app/features/tasks/data/repository/TaskRepository.kt
 - app/src/main/java/com/noteflow/app/features/tasks/presentation/TaskViewModel.kt
-- app/src/main/java/com/noteflow/app/features/tasks/presentation/screens/TaskListScreen.kt
+- app/src/main/java/com/noteflow/app/features/tasks/presentation/screens/TaskListScreen.kt ✅ مقسّمة
 
 ### التايمر
 - app/src/main/java/com/noteflow/app/features/timer/data/local/SessionEntity.kt
@@ -117,10 +108,10 @@
 
 ### الإحصائيات
 - app/src/main/java/com/noteflow/app/features/stats/presentation/StatsViewModel.kt
-- app/src/main/java/com/noteflow/app/features/stats/presentation/screens/StatsScreen.kt
+- app/src/main/java/com/noteflow/app/features/stats/presentation/screens/StatsScreen.kt ✅ مقسّمة
 
 ### الإعدادات
-- app/src/main/java/com/noteflow/app/features/settings/presentation/screens/SettingsScreen.kt
+- app/src/main/java/com/noteflow/app/features/settings/presentation/screens/SettingsScreen.kt ✅ مقسّمة
 
 ### البحث
 - app/src/main/java/com/noteflow/app/features/search/presentation/SearchScreen.kt
@@ -132,22 +123,12 @@
 ✅ المرحلة 3 — المهام والبومودورو
 ✅ المرحلة 4 — الربط والذكاء
 ✅ المرحلة 5 — إصلاح الـ crash على Android 11
-✅ تحسينات مضافة:
-   - Intro + Onboarding screens
-   - HomeScreen مع Daily Mastery + streak + Daily Goal
-   - NoteListScreen مع Search + Filters
-   - NoteDetailScreen مع Markdown + Tags + Connections
-   - TaskListScreen مع Priority groups + badges
-   - TimerScreen مع Session counter + Task picker
-   - StatsScreen مع Charts
-   - SettingsScreen مع Theme picker
-   - Backlinks + Auto-save + حذف وتعديل الملاحظات والمهام
-   - SearchScreen
+✅ المرحلة 5.5 — تقسيم كل الشاشات الكبيرة لضمان الاستقرار على Android 11
 
 ## الخطوة الجاية
-المرحلة 6: الميزات المتقدمة
-- Markdown Rendering كامل
-- Graph View
+المرحلة 6: البحث الحقيقي + ميزات متقدمة
+- SearchScreen تشتغل حقيقي (بحث في الملاحظات والمهام)
 - AI Integration بـ Groq
+- Graph View
 - Tags & Folders
 - Export PDF
