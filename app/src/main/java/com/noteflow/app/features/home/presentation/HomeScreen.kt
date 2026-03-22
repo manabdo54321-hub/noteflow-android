@@ -1,5 +1,6 @@
 package com.noteflow.app.features.home.presentation
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,12 +17,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,13 +48,7 @@ private val OutlineVariant = Color(0xFF47464C)
 
 @Composable
 private fun SimpleDivider(color: Color, verticalPadding: Int) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = verticalPadding.dp)
-            .height(1.dp)
-            .background(color)
-    )
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = verticalPadding.dp).height(1.dp).background(color))
 }
 
 @Composable
@@ -75,18 +72,41 @@ fun HomeScreen(
     var quickNote by remember { mutableStateOf("") }
     var showLeftDrawer by remember { mutableStateOf(false) }
     var showRightDrawer by remember { mutableStateOf(false) }
+    var isWriting by remember { mutableStateOf(false) }
+    var isTaskFocused by remember { mutableStateOf(false) }
+
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val greeting = when (hour) {
         in 5..11 -> "صباح الخير"
         in 12..17 -> "مساء النور"
         else -> "مساء الخير"
     }
+
+    // Zen Mode animations
+    val cardsAlpha by animateFloatAsState(
+        targetValue = when {
+            isWriting -> 0.15f
+            isTaskFocused -> 1f
+            else -> 1f
+        },
+        animationSpec = tween(400), label = "cardsAlpha"
+    )
+    val writeAreaWeight by animateFloatAsState(
+        targetValue = when {
+            isWriting -> 2f
+            isTaskFocused -> 0.3f
+            else -> 1f
+        },
+        animationSpec = tween(400), label = "writeWeight"
+    )
+
     LaunchedEffect(quickNote) {
         if (quickNote.isNotBlank()) {
             kotlinx.coroutines.delay(2000)
             noteViewModel.triggerAutoSave(quickNote, "", 0)
         }
     }
+
     Box(modifier = Modifier.fillMaxSize().background(BgColor)) {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             HomeTopBar(greeting, { showRightDrawer = true }, { showLeftDrawer = true }, onNavigateToStats)
@@ -94,11 +114,25 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                HomeQuickWrite(quickNote) { quickNote = it }
-                HomeCardsRow(tasks, timeLeft, isRunning, isWorkSession,
-                    { taskViewModel.toggleComplete(it) },
-                    { if (isRunning) timerViewModel.pause() else timerViewModel.start() }
+                HomeQuickWrite(
+                    quickNote = quickNote,
+                    isWriting = isWriting,
+                    writeAreaWeight = writeAreaWeight,
+                    onQuickNoteChange = { quickNote = it },
+                    onFocusChange = { isWriting = it; if (it) isTaskFocused = false }
                 )
+                Box(modifier = Modifier.graphicsLayer(alpha = cardsAlpha)) {
+                    HomeCardsRow(
+                        tasks = tasks,
+                        timeLeft = timeLeft,
+                        isRunning = isRunning,
+                        isWorkSession = isWorkSession,
+                        isTaskFocused = isTaskFocused,
+                        onToggleTask = { taskViewModel.toggleComplete(it) },
+                        onTimerToggle = { if (isRunning) timerViewModel.pause() else timerViewModel.start() },
+                        onTaskFocusChange = { isTaskFocused = it; if (it) isWriting = false }
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(120.dp))
         }
@@ -114,10 +148,8 @@ fun HomeScreen(
 
 @Composable
 private fun HomeTopBar(greeting: String, onShowRightDrawer: () -> Unit, onShowLeftDrawer: () -> Unit, onNavigateToStats: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().background(Color(0xFF1C1B1B)).statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1C1B1B)).statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Row(modifier = Modifier.clickable { onShowRightDrawer() }, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Brush.linearGradient(listOf(PrimaryColor, AccentColor))), contentAlignment = Alignment.Center) {
                 Text("م", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1C0062))
@@ -139,35 +171,82 @@ private fun HomeTopBar(greeting: String, onShowRightDrawer: () -> Unit, onShowLe
 }
 
 @Composable
-private fun HomeQuickWrite(quickNote: String, onQuickNoteChange: (String) -> Unit) {
+private fun HomeQuickWrite(
+    quickNote: String,
+    isWriting: Boolean,
+    writeAreaWeight: Float,
+    onQuickNoteChange: (String) -> Unit,
+    onFocusChange: (Boolean) -> Unit
+) {
+    val minHeight by animateDpAsState(
+        targetValue = if (isWriting) 320.dp else 220.dp,
+        animationSpec = tween(400), label = "writeHeight"
+    )
     Box(
-        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 220.dp)
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = minHeight)
             .clip(RoundedCornerShape(16.dp)).background(SurfaceLowest).padding(24.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text("ابدأ الكتابة...", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-            Spacer(modifier = Modifier.height(12.dp))
+            if (!isWriting && quickNote.isEmpty()) {
+                Text("✦", fontSize = 18.sp, color = PrimaryColor.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             BasicTextField(
-                value = quickNote, onValueChange = onQuickNoteChange,
-                textStyle = TextStyle(color = OnSurfaceVariant, fontSize = 16.sp, lineHeight = 26.sp),
+                value = quickNote,
+                onValueChange = onQuickNoteChange,
+                textStyle = TextStyle(
+                    color = OnSurface,
+                    fontSize = if (isWriting) 18.sp else 16.sp,
+                    lineHeight = 28.sp,
+                    textAlign = TextAlign.Right
+                ),
                 cursorBrush = SolidColor(PrimaryColor),
-                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 120.dp),
+                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = if (isWriting) 260.dp else 160.dp),
                 decorationBox = { inner ->
                     if (quickNote.isEmpty()) {
-                        Text("فكّر في مشروعك القادم...", color = OnSurfaceVariant.copy(alpha = 0.4f), fontSize = 16.sp)
+                        Text(
+                            if (isWriting) "اكتب أفكارك هنا..." else "ابدأ الكتابة...",
+                            color = PrimaryColor.copy(alpha = 0.2f),
+                            fontSize = if (isWriting) 18.sp else 16.sp,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Right
+                        )
                     }
                     inner()
                 }
             )
         }
+        Row(modifier = Modifier.align(Alignment.TopStart), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (!isWriting) {
+                Box(modifier = Modifier.size(28.dp).clip(CircleShape)
+                    .background(PrimaryColor.copy(alpha = 0.1f))
+                    .clickable { onFocusChange(true) },
+                    contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Edit, contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(14.dp))
+                }
+            } else {
+                Box(modifier = Modifier.size(28.dp).clip(CircleShape)
+                    .background(PrimaryColor.copy(alpha = 0.15f))
+                    .clickable { onFocusChange(false) },
+                    contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Check, contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(14.dp))
+                }
+            }
+        }
         if (quickNote.isNotBlank()) {
-            Text("يحفظ تلقائياً...", fontSize = 10.sp, letterSpacing = 1.sp, color = OutlineVariant, modifier = Modifier.align(Alignment.TopEnd))
+            Text("يحفظ تلقائياً...", fontSize = 10.sp, letterSpacing = 1.sp, color = OutlineVariant,
+                modifier = Modifier.align(Alignment.BottomEnd))
         }
     }
 }
 
 @Composable
-private fun HomeCardsRow(tasks: List<Task>, timeLeft: Long, isRunning: Boolean, isWorkSession: Boolean, onToggleTask: (Task) -> Unit, onTimerToggle: () -> Unit) {
+private fun HomeCardsRow(
+    tasks: List<Task>, timeLeft: Long, isRunning: Boolean, isWorkSession: Boolean,
+    isTaskFocused: Boolean, onToggleTask: (Task) -> Unit,
+    onTimerToggle: () -> Unit, onTaskFocusChange: (Boolean) -> Unit
+) {
     val activeTasks = tasks.filter { !it.isCompleted }
     val completedTasks = tasks.filter { it.isCompleted }
     val totalTasks = tasks.size
@@ -176,47 +255,86 @@ private fun HomeCardsRow(tasks: List<Task>, timeLeft: Long, isRunning: Boolean, 
     val timerProgress = timeLeft.toFloat() / totalDuration.toFloat()
     val timerMinutes = (timeLeft / 1000) / 60
     val timerSeconds = (timeLeft / 1000) % 60
+
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        HomeTasksCard(Modifier.weight(1f), activeTasks, completedTasks, totalTasks, completionRate, onToggleTask)
-        HomeTimerCard(Modifier.weight(1f), timerMinutes, timerSeconds, timerProgress, isRunning, onTimerToggle)
+        val tasksWeight by animateFloatAsState(targetValue = if (isTaskFocused) 1.8f else 1f, animationSpec = tween(400), label = "tasksWeight")
+        val timerWeight by animateFloatAsState(targetValue = if (isTaskFocused) 0.6f else 1f, animationSpec = tween(400), label = "timerWeight")
+        HomeTasksCard(Modifier.weight(tasksWeight), activeTasks, completedTasks, totalTasks, completionRate, isTaskFocused, onToggleTask, onTaskFocusChange)
+        HomeTimerCard(Modifier.weight(timerWeight), timerMinutes, timerSeconds, timerProgress, isRunning, onTimerToggle)
     }
 }
 
 @Composable
-private fun HomeTasksCard(modifier: Modifier, activeTasks: List<Task>, completedTasks: List<Task>, totalTasks: Int, completionRate: Float, onToggleTask: (Task) -> Unit) {
+private fun HomeTasksCard(
+    modifier: Modifier, activeTasks: List<Task>, completedTasks: List<Task>,
+    totalTasks: Int, completionRate: Float, isTaskFocused: Boolean,
+    onToggleTask: (Task) -> Unit, onTaskFocusChange: (Boolean) -> Unit
+) {
     Column(modifier = modifier.clip(RoundedCornerShape(16.dp)).background(SurfaceColor).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("اليوم", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-            Column(horizontalAlignment = Alignment.End) {
-                Text("${completedTasks.size} من $totalTasks", fontSize = 10.sp, color = PrimaryColor, letterSpacing = 1.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Box(modifier = Modifier.width(40.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(SurfaceHigh)) {
-                    Box(modifier = Modifier.fillMaxWidth(completionRate).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Brush.horizontalGradient(listOf(PrimaryColor, AccentColor))))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("${completedTasks.size} من $totalTasks", fontSize = 10.sp, color = PrimaryColor, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(modifier = Modifier.width(40.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(SurfaceHigh)) {
+                        Box(modifier = Modifier.fillMaxWidth(completionRate).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Brush.horizontalGradient(listOf(PrimaryColor, AccentColor))))
+                    }
+                }
+                Box(modifier = Modifier.size(24.dp).clip(CircleShape)
+                    .background(if (isTaskFocused) PrimaryColor.copy(alpha = 0.2f) else Color.Transparent)
+                    .clickable { onTaskFocusChange(!isTaskFocused) },
+                    contentAlignment = Alignment.Center) {
+                    Icon(if (isTaskFocused) Icons.Default.UnfoldLess else Icons.Default.UnfoldMore,
+                        contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(14.dp))
                 }
             }
         }
-        val displayTasks = (activeTasks.take(2) + completedTasks.take(2)).take(4)
+        val displayTasks = (activeTasks.take(if (isTaskFocused) 4 else 2) + completedTasks.take(if (isTaskFocused) 3 else 2)).take(if (isTaskFocused) 6 else 4)
         if (displayTasks.isEmpty()) {
             Text("لا توجد مهام ✨", color = OnSurfaceVariant, fontSize = 13.sp)
         } else {
-            displayTasks.forEach { task -> TaskRow(task = task, onToggle = { onToggleTask(task) }) }
+            displayTasks.forEach { task -> AnimatedTaskRow(task = task, onToggle = { onToggleTask(task) }) }
         }
+    }
+}
+
+@Composable
+private fun AnimatedTaskRow(task: Task, onToggle: () -> Unit) {
+    val strikeWidth by animateFloatAsState(
+        targetValue = if (task.isCompleted) 1f else 0f,
+        animationSpec = tween(300), label = "strike"
+    )
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(modifier = Modifier.size(20.dp).clip(RoundedCornerShape(4.dp))
+            .background(if (task.isCompleted) PrimaryColor else Color.Transparent)
+            .border(1.dp, if (task.isCompleted) Color.Transparent else OutlineVariant, RoundedCornerShape(4.dp))
+            .clickable { onToggle() }, contentAlignment = Alignment.Center) {
+            if (task.isCompleted) {
+                Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF1C0062), modifier = Modifier.size(13.dp))
+            }
+        }
+        Text(
+            text = task.title, fontSize = 14.sp,
+            color = if (task.isCompleted) OnSurface.copy(alpha = 0.4f) else OnSurfaceVariant,
+            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
+            modifier = Modifier.weight(1f), maxLines = 1
+        )
     }
 }
 
 @Composable
 private fun HomeTimerCard(modifier: Modifier, timerMinutes: Long, timerSeconds: Long, timerProgress: Float, isRunning: Boolean, onTimerToggle: () -> Unit) {
     Column(modifier = modifier.clip(RoundedCornerShape(16.dp)).background(SurfaceColor).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("تايمر التركيز", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-        Text("جلسة: %02d:%02d".format(timerMinutes, timerSeconds), fontSize = 11.sp, color = OutlineVariant)
+        Text("تايمر", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnSurface)
+        Text("%02d:%02d".format(timerMinutes, timerSeconds), fontSize = 11.sp, color = OutlineVariant)
         Spacer(modifier = Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFF002331)).clickable { onTimerToggle() }.padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFF002331)).clickable { onTimerToggle() }.padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null, tint = TertiaryColor, modifier = Modifier.size(14.dp))
-                Text(if (isRunning) "إيقاف" else "ابدأ", fontSize = 11.sp, color = TertiaryColor, letterSpacing = 1.sp)
             }
-            Box(modifier = Modifier.size(80.dp), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(70.dp), contentAlignment = Alignment.Center) {
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                     val strokeWidth = 4.dp.toPx()
                     val radius = size.minDimension / 2 - strokeWidth
@@ -227,7 +345,7 @@ private fun HomeTimerCard(modifier: Modifier, timerMinutes: Long, timerSeconds: 
                         style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round),
                         topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth), size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
                 }
-                Text("%02d:%02d".format(timerMinutes, timerSeconds), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnSurface)
+                Text("%02d:%02d".format(timerMinutes, timerSeconds), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = OnSurface)
             }
         }
     }
@@ -235,12 +353,20 @@ private fun HomeTimerCard(modifier: Modifier, timerMinutes: Long, timerSeconds: 
 
 @Composable
 private fun HomeBottomNav(modifier: Modifier, onAddNote: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToSearch: () -> Unit, onNavigateToSettings: () -> Unit) {
+    var fabPressed by remember { mutableStateOf(false) }
+    val fabScale by animateFloatAsState(
+        targetValue = if (fabPressed) 0.85f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "fab"
+    )
     Box(modifier = modifier.padding(bottom = 32.dp)) {
         Row(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(Color(0xFF201F1F).copy(alpha = 0.95f)).padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).background(Brush.linearGradient(listOf(PrimaryColor, AccentColor))).clickable { onAddNote() }, contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(52.dp).scale(fabScale).clip(CircleShape)
+                .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
+                .clickable { fabPressed = true; onAddNote() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.EditNote, contentDescription = null, tint = Color(0xFF131313), modifier = Modifier.size(26.dp))
             }
+            LaunchedEffect(fabPressed) { if (fabPressed) { kotlinx.coroutines.delay(150); fabPressed = false } }
             Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToTasks() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Bolt, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
             }
@@ -306,23 +432,5 @@ private fun DrawerItem(icon: ImageVector, label: String, tint: Color = OnSurface
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
         Text(label, color = if (tint == OnSurfaceVariant) OnSurface else tint, fontSize = 15.sp)
-    }
-}
-
-@Composable
-private fun TaskRow(task: Task, onToggle: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(modifier = Modifier.size(20.dp).clip(RoundedCornerShape(4.dp))
-            .background(if (task.isCompleted) PrimaryColor else Color.Transparent)
-            .border(1.dp, if (task.isCompleted) Color.Transparent else OutlineVariant, RoundedCornerShape(4.dp))
-            .clickable { onToggle() }, contentAlignment = Alignment.Center) {
-            if (task.isCompleted) {
-                Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF1C0062), modifier = Modifier.size(13.dp))
-            }
-        }
-        Text(text = task.title, fontSize = 14.sp,
-            color = if (task.isCompleted) OnSurface.copy(alpha = 0.4f) else OnSurfaceVariant,
-            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-            modifier = Modifier.weight(1f), maxLines = 1)
     }
 }
