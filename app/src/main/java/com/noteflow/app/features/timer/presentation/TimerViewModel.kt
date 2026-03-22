@@ -81,5 +81,47 @@ class TimerViewModel @Inject constructor(
         countDownTimer?.cancel()
         _isRunning.value = false
         _sessionFinished.value = false
-        _timeLeft.value = if (_isWorkSession.value) _customDuration.value else
-            if (_completedSessions.value 
+        val isLongBreak = _completedSessions.value % 4 == 0 && _completedSessions.value > 0
+        _timeLeft.value = if (_isWorkSession.value) _customDuration.value
+            else if (isLongBreak) LONG_BREAK_DURATION else BREAK_DURATION
+    }
+
+    fun skipSession() {
+        countDownTimer?.cancel()
+        _isRunning.value = false
+        _sessionFinished.value = false
+        if (_isWorkSession.value) _completedSessions.value++
+        _isWorkSession.value = !_isWorkSession.value
+        val isLongBreak = _completedSessions.value % 4 == 0 && _completedSessions.value > 0
+        _timeLeft.value = if (_isWorkSession.value) _customDuration.value
+            else if (isLongBreak) LONG_BREAK_DURATION else BREAK_DURATION
+    }
+
+    fun acknowledgeFinished() {
+        _sessionFinished.value = false
+    }
+
+    private fun onSessionFinished() {
+        viewModelScope.launch {
+            sessionRepository.saveSession(
+                SessionEntity(
+                    taskId = currentTaskId,
+                    startTime = sessionStartTime,
+                    endTime = System.currentTimeMillis(),
+                    durationMinutes = if (_isWorkSession.value) (_customDuration.value / 60000).toInt() else 5,
+                    isWorkSession = _isWorkSession.value
+                )
+            )
+        }
+        if (_isWorkSession.value) _completedSessions.value++
+        _isWorkSession.value = !_isWorkSession.value
+        val isLongBreak = _completedSessions.value % 4 == 0 && _completedSessions.value > 0
+        _timeLeft.value = if (_isWorkSession.value) _customDuration.value
+            else if (isLongBreak) LONG_BREAK_DURATION else BREAK_DURATION
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        countDownTimer?.cancel()
+    }
+}
