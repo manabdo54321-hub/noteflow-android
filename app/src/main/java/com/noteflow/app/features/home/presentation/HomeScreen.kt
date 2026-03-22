@@ -287,7 +287,7 @@ private fun TimerFullScreen(timeLeft: Long, isRunning: Boolean, isWorkSession: B
                 Text("%02d:%02d".format(timerMinutes, timerSeconds), fontSize = 52.sp, fontWeight = FontWeight.Bold, color = OnSurface)
             }
             Box(modifier = Modifier.size(64.dp).clip(CircleShape)
-                .background(if (isRunning) TertiaryColor.copy(alpha = 0.15f) else Brush.linearGradient(listOf(TertiaryColor.copy(alpha = 0.3f), AccentColor.copy(alpha = 0.3f))))
+                .background(if (isRunning) SurfaceHigh else SurfaceColor)
                 .clickable { onToggle() }, contentAlignment = Alignment.Center) {
                 Icon(if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null, tint = TertiaryColor, modifier = Modifier.size(32.dp))
             }
