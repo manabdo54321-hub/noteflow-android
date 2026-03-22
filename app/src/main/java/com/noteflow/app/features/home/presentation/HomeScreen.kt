@@ -175,12 +175,12 @@ private fun AddBottomSheet(
 ) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { onDismiss() })
     Column(
-        modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)
+        modifier = Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
             .background(Color(0xFF1C1B1B)).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(modifier = Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(OutlineVariant).align(Alignment.CenterHorizontally))
+        Box(modifier = Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(OutlineVariant))
         Spacer(modifier = Modifier.height(4.dp))
         AddSheetItem(Icons.Default.EditNote, "ملاحظة جديدة", "ابدأ كتابة فكرة جديدة", PrimaryColor) { onNewNote() }
         AddSheetItem(Icons.Default.CheckCircle, "مهمة جديدة", "أضف مهمة لقائمتك", AccentColor) { onNewTask() }
