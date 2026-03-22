@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,13 +54,8 @@ private val motivationalMessages = listOf(
 )
 
 private val whiteNoiseSounds = listOf(
-    "🌧" to "مطر",
-    "🌊" to "أمواج البحر",
-    "🌲" to "غابة هادئة",
-    "☕" to "كافيه",
-    "🌀" to "ضوضاء بيضاء",
-    "🔥" to "نار المدفأة",
-    "🎵" to "موسيقى هادئة"
+    "🌧" to "مطر", "🌊" to "أمواج البحر", "🌲" to "غابة هادئة",
+    "☕" to "كافيه", "🌀" to "ضوضاء بيضاء", "🔥" to "نار المدفأة", "🎵" to "موسيقى هادئة"
 )
 
 @Composable
@@ -71,68 +68,89 @@ fun TimerScreen(
     val isRunning by timerViewModel.isRunning.collectAsState()
     val isWorkSession by timerViewModel.isWorkSession.collectAsState()
     val completedSessions by timerViewModel.completedSessions.collectAsState()
+    val sessionFinished by timerViewModel.sessionFinished.collectAsState()
     val tasks by taskViewModel.tasks.collectAsState()
 
     var selectedTaskId by remember { mutableStateOf<Long?>(null) }
     var showTaskPicker by remember { mutableStateOf(false) }
     var showStopConfirm by remember { mutableStateOf(false) }
+    var showSkipConfirm by remember { mutableStateOf(false) }
     var showNoiseSheet by remember { mutableStateOf(false) }
     var showTimerModeSheet by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
     var selectedNoise by remember { mutableStateOf<String?>(null) }
     var isCountingUp by remember { mutableStateOf(false) }
     var countUpSeconds by remember { mutableStateOf(0L) }
+    var selectedHours by remember { mutableStateOf(0) }
+    var selectedMinutes by remember { mutableStateOf(25) }
 
     val selectedTaskName = tasks.find { it.id == selectedTaskId }?.title
-    val totalDuration = if (isWorkSession) TimerViewModel.WORK_DURATION else TimerViewModel.BREAK_DURATION
-    val progress = if (isCountingUp) 1f else timeLeft.toFloat() / totalDuration.toFloat()
+    val totalDuration = if (isCountingUp) (countUpSeconds * 1000L).coerceAtLeast(1L)
+        else if (isWorkSession) timerViewModel.customDuration.collectAsState().value
+        else if (completedSessions % 4 == 0 && completedSessions > 0) TimerViewModel.LONG_BREAK_DURATION
+        else TimerViewModel.BREAK_DURATION
+    val progress = if (isCountingUp) {
+        val target = (selectedHours * 3600L + selectedMinutes * 60L).coerceAtLeast(1L)
+        (countUpSeconds.toFloat() / target.toFloat()).coerceIn(0f, 1f)
+    } else timeLeft.toFloat() / totalDuration.toFloat()
     val minutes = if (isCountingUp) countUpSeconds / 60 else (timeLeft / 1000) / 60
     val seconds = if (isCountingUp) countUpSeconds % 60 else (timeLeft / 1000) % 60
+    val motivationalMsg = remember(completedSessions) { motivationalMessages[completedSessions % motivationalMessages.size] }
 
     LaunchedEffect(isRunning, isCountingUp) {
         if (isRunning && isCountingUp) {
             while (isRunning) {
                 kotlinx.coroutines.delay(1000)
                 countUpSeconds++
+                val target = selectedHours * 3600L + selectedMinutes * 60L
+                if (target > 0 && countUpSeconds >= target) {
+                    timerViewModel.pause()
+                    break
+                }
             }
         }
     }
 
-    val motivationalMsg = remember(completedSessions) {
-        motivationalMessages[completedSessions % motivationalMessages.size]
+    LaunchedEffect(sessionFinished) {
+        if (sessionFinished) timerViewModel.acknowledgeFinished()
     }
 
     Box(modifier = Modifier.fillMaxSize().background(BgColor)) {
         Column(modifier = Modifier.fillMaxSize()) {
             TimerTopBar(onBack = onBack)
-            TimerTaskSelector(selectedTaskName = selectedTaskName, isRunning = isRunning, onShowPicker = { showTaskPicker = true })
-            Spacer(modifier = Modifier.height(16.dp))
-            TimerCircle(minutes = minutes, seconds = seconds, progress = progress, isWorkSession = isWorkSession, completedSessions = completedSessions)
+            TimerTaskSelector(selectedTaskName, isRunning) { showTaskPicker = true }
+            Spacer(modifier = Modifier.height(12.dp))
+            TimerCircleDisplay(minutes, seconds, progress, isWorkSession, completedSessions,
+                isRunning = isRunning, isCountingUp = isCountingUp,
+                onTimePickerClick = { if (!isRunning) showTimePicker = true })
             Spacer(modifier = Modifier.height(8.dp))
-            TimerMotivation(message = motivationalMsg, isWorkSession = isWorkSession)
-            Spacer(modifier = Modifier.height(24.dp))
-            TimerControls(
-                isRunning = isRunning,
-                isWorkSession = isWorkSession,
-                onStart = { timerViewModel.setTask(selectedTaskId); if (isCountingUp) { /* handled by LaunchedEffect */ } else timerViewModel.start() },
+            TimerMotivationText(motivationalMsg, isWorkSession)
+            Spacer(modifier = Modifier.height(20.dp))
+            TimerMainControls(
+                isRunning = isRunning, isWorkSession = isWorkSession,
+                onStart = { timerViewModel.setTask(selectedTaskId); if (!isCountingUp) timerViewModel.start() else { timerViewModel.setTask(selectedTaskId); timerViewModel.start() } },
                 onPause = { timerViewModel.pause() },
-                onStop = { showStopConfirm = true }
+                onStop = { showStopConfirm = true },
+                onSkip = { showSkipConfirm = true }
             )
             Spacer(modifier = Modifier.weight(1f))
-            TimerBottomBar(
-                selectedNoise = selectedNoise,
-                isCountingUp = isCountingUp,
-                onNoiseClick = { showNoiseSheet = true },
-                onModeClick = { showTimerModeSheet = true }
-            )
+            TimerBottomToolbar(selectedNoise, isCountingUp,
+                { showNoiseSheet = true }, { showTimerModeSheet = true })
         }
 
-        if (showTaskPicker) TimerTaskPicker(tasks = tasks.filter { !it.isCompleted }, selectedTaskId = selectedTaskId,
-            onSelect = { selectedTaskId = it; showTaskPicker = false }, onDismiss = { showTaskPicker = false })
-        if (showStopConfirm) TimerStopConfirm(onConfirm = { timerViewModel.reset(); countUpSeconds = 0; showStopConfirm = false }, onDismiss = { showStopConfirm = false })
-        if (showNoiseSheet) TimerNoiseSheet(selectedNoise = selectedNoise, onSelect = { selectedNoise = it; showNoiseSheet = false }, onDismiss = { showNoiseSheet = false })
-        if (showTimerModeSheet) TimerModeSheet(isCountingUp = isCountingUp,
-            onSelectMode = { countUp -> isCountingUp = countUp; if (!countUp) countUpSeconds = 0; showTimerModeSheet = false },
-            onDismiss = { showTimerModeSheet = false })
+        if (showTaskPicker) TimerTaskPickerDialog(tasks.filter { !it.isCompleted }, selectedTaskId,
+            { selectedTaskId = it; showTaskPicker = false }, { showTaskPicker = false })
+        if (showStopConfirm) TimerConfirmDialog("إيقاف الجلسة؟", "هل أنت متأكد؟ سيتم إلغاء التقدم",
+            "إيقاف", "تابع التركيز",
+            { timerViewModel.reset(); countUpSeconds = 0; showStopConfirm = false }, { showStopConfirm = false })
+        if (showSkipConfirm) TimerConfirmDialog("تخطي الجلسة؟", "هل أنت متأكد من التخطي؟",
+            "تخطي", "إلغاء",
+            { timerViewModel.skipSession(); countUpSeconds = 0; showSkipConfirm = false }, { showSkipConfirm = false })
+        if (showNoiseSheet) TimerNoiseBottomSheet(selectedNoise, { selectedNoise = it; showNoiseSheet = false }, { showNoiseSheet = false })
+        if (showTimerModeSheet) TimerModeBottomSheet(isCountingUp, { isCountingUp = it; countUpSeconds = 0; showTimerModeSheet = false }, { showTimerModeSheet = false })
+        if (showTimePicker) TimerTimePickerDialog(selectedHours, selectedMinutes,
+            { h, m -> selectedHours = h; selectedMinutes = m; timerViewModel.setCustomDuration(h, m); showTimePicker = false },
+            { showTimePicker = false })
     }
 }
 
@@ -154,24 +172,24 @@ private fun TimerTaskSelector(selectedTaskName: String?, isRunning: Boolean, onS
         Row(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(SurfaceColor)
             .clickable(enabled = !isRunning) { onShowPicker() }.padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = if (selectedTaskName != null) PrimaryColor else OutlineVariant, modifier = Modifier.size(16.dp))
-            Text(
-                text = selectedTaskName ?: "يرجى تحديد مهمة...",
-                fontSize = 13.sp, color = if (selectedTaskName != null) OnSurface else OnSurfaceVariant,
-                maxLines = 1, overflow = TextOverflow.Ellipsis
-            )
+            Icon(Icons.Default.CheckCircle, contentDescription = null,
+                tint = if (selectedTaskName != null) PrimaryColor else OutlineVariant, modifier = Modifier.size(16.dp))
+            Text(selectedTaskName ?: "يرجى تحديد مهمة...", fontSize = 13.sp,
+                color = if (selectedTaskName != null) OnSurface else OnSurfaceVariant,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (!isRunning) Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = OutlineVariant, modifier = Modifier.size(16.dp))
         }
     }
 }
 
 @Composable
-private fun TimerCircle(minutes: Long, seconds: Long, progress: Float, isWorkSession: Boolean, completedSessions: Int) {
+private fun TimerCircleDisplay(minutes: Long, seconds: Long, progress: Float, isWorkSession: Boolean,
+    completedSessions: Int, isRunning: Boolean, isCountingUp: Boolean, onTimePickerClick: () -> Unit) {
     val breatheScale by rememberInfiniteTransition(label = "breathe").animateFloat(
-        initialValue = 1f, targetValue = if (!isWorkSession) 1.04f else 1f,
+        initialValue = 1f, targetValue = if (!isWorkSession && isRunning) 1.03f else 1f,
         animationSpec = infiniteRepeatable(tween(3000, easing = EaseInOut), RepeatMode.Reverse), label = "scale"
     )
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp), contentAlignment = Alignment.Center) {
         Box(modifier = Modifier.size(260.dp).scale(breatheScale), contentAlignment = Alignment.Center) {
             androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                 val strokeWidth = 10.dp.toPx()
@@ -185,47 +203,46 @@ private fun TimerCircle(minutes: Long, seconds: Long, progress: Float, isWorkSes
                     topLeft = topLeft, size = arcSize, style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("%02d:%02d".format(minutes, seconds), fontSize = 54.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(if (isWorkSession) "جلسة تركيز" else "وقت الراحة 🌿", fontSize = 12.sp, letterSpacing = 2.sp, color = OnSurfaceVariant)
+                Box(modifier = Modifier.clickable { onTimePickerClick() }) {
+                    Text("%02d:%02d".format(minutes, seconds), fontSize = 52.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+                Text(if (isWorkSession) "جلسة تركيز" else if (completedSessions % 4 == 0 && completedSessions > 0) "استراحة كبيرة 🌿" else "استراحة قصيرة 🌿",
+                    fontSize = 11.sp, letterSpacing = 2.sp, color = OnSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     repeat(4) { index ->
                         Box(modifier = Modifier.size(if (index == completedSessions % 4) 10.dp else 7.dp).clip(CircleShape)
-                            .background(when {
-                                index < completedSessions % 4 -> PrimaryColor
-                                index == completedSessions % 4 -> AccentColor
-                                else -> SurfaceHigh
-                            }))
+                            .background(when { index < completedSessions % 4 -> PrimaryColor; index == completedSessions % 4 -> AccentColor; else -> SurfaceHigh }))
                     }
                 }
                 Text("الجلسة ${(completedSessions % 4) + 1} من 4", fontSize = 10.sp, letterSpacing = 1.sp, color = OutlineVariant)
+                if (!isRunning) Text("اضغط على الوقت لتغييره", fontSize = 10.sp, color = OutlineVariant.copy(alpha = 0.6f))
             }
         }
     }
 }
 
 @Composable
-private fun TimerMotivation(message: String, isWorkSession: Boolean) {
+private fun TimerMotivationText(message: String, isWorkSession: Boolean) {
     if (!isWorkSession) {
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("تنفس بعمق...", fontSize = 13.sp, color = TertiaryColor, letterSpacing = 1.sp)
-            val breathText by rememberInfiniteTransition(label = "breath").animateFloat(
-                initialValue = 0f, targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(4000), RepeatMode.Reverse), label = "breathAlpha"
-            )
-            Text(if (breathText < 0.5f) "شهيق..." else "زفير...", fontSize = 12.sp, color = OnSurfaceVariant.copy(alpha = 0.6f + breathText * 0.4f))
+        val breathAlpha by rememberInfiniteTransition(label = "breath").animateFloat(
+            initialValue = 0.4f, targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(4000), RepeatMode.Reverse), label = "alpha"
+        )
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("تنفس بعمق...", fontSize = 13.sp, color = TertiaryColor.copy(alpha = breathAlpha))
         }
     } else {
-        Text(text = message, fontSize = 13.sp, color = OnSurfaceVariant.copy(alpha = 0.7f),
+        Text(message, fontSize = 13.sp, color = OnSurfaceVariant.copy(alpha = 0.7f),
             modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
     }
 }
 
 @Composable
-private fun TimerControls(isRunning: Boolean, isWorkSession: Boolean, onStart: () -> Unit, onPause: () -> Unit, onStop: () -> Unit) {
-    val fabScale by animateFloatAsState(targetValue = if (isRunning) 0.95f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "fab")
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Box(modifier = Modifier.size(200.dp, 56.dp).scale(fabScale).clip(RoundedCornerShape(50.dp))
+private fun TimerMainControls(isRunning: Boolean, isWorkSession: Boolean,
+    onStart: () -> Unit, onPause: () -> Unit, onStop: () -> Unit, onSkip: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Box(modifier = Modifier.size(220.dp, 56.dp).clip(RoundedCornerShape(50.dp))
             .background(if (isRunning) SurfaceColor else Color.White)
             .clickable { if (isRunning) onPause() else onStart() },
             contentAlignment = Alignment.Center) {
@@ -234,49 +251,105 @@ private fun TimerControls(isRunning: Boolean, isWorkSession: Boolean, onStart: (
                     contentDescription = null,
                     tint = if (isRunning) OnSurface else Color(0xFF131313),
                     modifier = Modifier.size(22.dp))
-                Text(if (isRunning) "إيقاف مؤقت" else "ابدأ التركيز",
+                Text(if (isRunning) "إيقاف مؤقت" else if (isWorkSession) "ابدأ التركيز" else "ابدأ الاستراحة",
                     fontSize = 15.sp, fontWeight = FontWeight.Bold,
                     color = if (isRunning) OnSurface else Color(0xFF131313))
             }
         }
         if (isRunning) {
-            Box(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(SurfaceHigh).clickable { onStop() }.padding(horizontal = 24.dp, vertical = 10.dp)) {
-                Text("إيقاف", fontSize = 13.sp, color = Color(0xFFFF6B6B))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(SurfaceHigh)
+                    .clickable { onStop() }.padding(horizontal = 24.dp, vertical = 10.dp)) {
+                    Text("إيقاف", fontSize = 13.sp, color = Color(0xFFFF6B6B))
+                }
+                Box(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(SurfaceHigh)
+                    .clickable { onSkip() }.padding(horizontal = 24.dp, vertical = 10.dp)) {
+                    Text("تخطي ⏭", fontSize = 13.sp, color = OnSurfaceVariant)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun TimerBottomBar(selectedNoise: String?, isCountingUp: Boolean, onNoiseClick: () -> Unit, onModeClick: () -> Unit) {
+private fun TimerBottomToolbar(selectedNoise: String?, isCountingUp: Boolean, onNoiseClick: () -> Unit, onModeClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().background(SurfaceColor).padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-        TimerBottomBtn(icon = Icons.Default.MusicNote, label = selectedNoise ?: "ضوضاء بيضاء",
-            isActive = selectedNoise != null, onClick = onNoiseClick)
-        TimerBottomBtn(icon = Icons.Default.Timer, label = if (isCountingUp) "تصاعدي" else "تنازلي",
-            isActive = isCountingUp, onClick = onModeClick)
-        TimerBottomBtn(icon = Icons.Default.SelfImprovement, label = "الوضع الصارم", isActive = false, onClick = {})
+        TimerToolBtn(Icons.Default.MusicNote, selectedNoise ?: "ضوضاء بيضاء", selectedNoise != null, onNoiseClick)
+        TimerToolBtn(Icons.Default.Timer, if (isCountingUp) "تصاعدي" else "تنازلي", isCountingUp, onModeClick)
+        TimerToolBtn(Icons.Default.SelfImprovement, "الوضع الصارم", false) {}
     }
 }
 
 @Composable
-private fun TimerBottomBtn(icon: ImageVector, label: String, isActive: Boolean, onClick: () -> Unit) {
+private fun TimerToolBtn(icon: ImageVector, label: String, isActive: Boolean, onClick: () -> Unit) {
     Column(modifier = Modifier.clickable { onClick() }.padding(horizontal = 12.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Icon(icon, contentDescription = null, tint = if (isActive) PrimaryColor else OnSurfaceVariant, modifier = Modifier.size(22.dp))
-        Text(label, fontSize = 10.sp, color = if (isActive) PrimaryColor else OnSurfaceVariant, letterSpacing = 0.5.sp, textAlign = TextAlign.Center)
+        Text(label, fontSize = 10.sp, color = if (isActive) PrimaryColor else OnSurfaceVariant, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
-private fun TimerTaskPicker(tasks: List<com.noteflow.app.features.tasks.domain.model.Task>, selectedTaskId: Long?, onSelect: (Long?) -> Unit, onDismiss: () -> Unit) {
+private fun TimerTimePickerDialog(initialHours: Int, initialMinutes: Int, onConfirm: (Int, Int) -> Unit, onDismiss: () -> Unit) {
+    var hours by remember { mutableStateOf(initialHours) }
+    var minutes by remember { mutableStateOf(initialMinutes) }
+
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceColor,
+        title = { Text("اختار الوقت", color = Color.White, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("اسحب لأعلى أو لأسفل لتغيير الوقت", fontSize = 12.sp, color = OnSurfaceVariant, textAlign = TextAlign.Center)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    TimeScrollPicker(value = hours, maxValue = 23, label = "ساعة") { hours = it }
+                    Text(":", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = PrimaryColor)
+                    TimeScrollPicker(value = minutes, maxValue = 59, label = "دقيقة") { minutes = it }
+                }
+                Text("الوقت المحدد: %02d:%02d".format(hours, minutes), fontSize = 13.sp, color = PrimaryColor)
+            }
+        },
+        confirmButton = { TextButton(onClick = { if (hours > 0 || minutes > 0) onConfirm(hours, minutes) }) { Text("تأكيد", color = PrimaryColor, fontWeight = FontWeight.Bold) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء", color = OnSurfaceVariant) } }
+    )
+}
+
+@Composable
+private fun TimeScrollPicker(value: Int, maxValue: Int, label: String, onValueChange: (Int) -> Unit) {
+    var dragAccumulator by remember { mutableStateOf(0f) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, fontSize = 10.sp, color = OutlineVariant, letterSpacing = 1.sp)
+        Box(modifier = Modifier.size(72.dp, 120.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceHigh)
+            .pointerInput(value) {
+                detectVerticalDragGestures(
+                    onDragEnd = { dragAccumulator = 0f },
+                    onVerticalDrag = { _, dragAmount ->
+                        dragAccumulator += dragAmount
+                        val steps = (dragAccumulator / 40).toInt()
+                        if (steps != 0) {
+                            val newVal = (value - steps).coerceIn(0, maxValue)
+                            onValueChange(newVal)
+                            dragAccumulator -= steps * 40f
+                        }
+                    }
+                )
+            }, contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("%02d".format((value - 1).coerceAtLeast(0)), fontSize = 18.sp, color = OutlineVariant)
+                Text("%02d".format(value), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = PrimaryColor)
+                Text("%02d".format((value + 1).coerceAtMost(maxValue)), fontSize = 18.sp, color = OutlineVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimerTaskPickerDialog(tasks: List<com.noteflow.app.features.tasks.domain.model.Task>, selectedTaskId: Long?, onSelect: (Long?) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceColor,
         title = { Text("اختار مهمة", color = Color.White, fontWeight = FontWeight.Bold) },
         text = {
             LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                 item {
-                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
-                        .clickable { onSelect(null) }.padding(12.dp),
+                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { onSelect(null) }.padding(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.NotInterested, contentDescription = null, tint = OutlineVariant, modifier = Modifier.size(18.dp))
                         Text("بلاش مهمة", color = OnSurfaceVariant, fontSize = 14.sp)
@@ -289,7 +362,8 @@ private fun TimerTaskPicker(tasks: List<com.noteflow.app.features.tasks.domain.m
                         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null,
                             tint = if (selectedTaskId == task.id) PrimaryColor else OutlineVariant, modifier = Modifier.size(18.dp))
-                        Text(task.title, color = if (selectedTaskId == task.id) PrimaryColor else Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(task.title, color = if (selectedTaskId == task.id) PrimaryColor else Color.White,
+                            fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -297,17 +371,17 @@ private fun TimerTaskPicker(tasks: List<com.noteflow.app.features.tasks.domain.m
 }
 
 @Composable
-private fun TimerStopConfirm(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+private fun TimerConfirmDialog(title: String, message: String, confirmText: String, dismissText: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceColor,
-        title = { Text("إيقاف الجلسة؟", color = Color.White, fontWeight = FontWeight.Bold) },
-        text = { Text("هل أنت متأكد؟ سيتم إلغاء التقدم الحالي", color = OnSurfaceVariant) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("إيقاف", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("تابع التركيز", color = PrimaryColor) } }
+        title = { Text(title, color = Color.White, fontWeight = FontWeight.Bold) },
+        text = { Text(message, color = OnSurfaceVariant) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmText, color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(dismissText, color = PrimaryColor) } }
     )
 }
 
 @Composable
-private fun TimerNoiseSheet(selectedNoise: String?, onSelect: (String?) -> Unit, onDismiss: () -> Unit) {
+private fun TimerNoiseBottomSheet(selectedNoise: String?, onSelect: (String?) -> Unit, onDismiss: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { onDismiss() })
     Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
         .background(SurfaceColor).padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -315,8 +389,7 @@ private fun TimerNoiseSheet(selectedNoise: String?, onSelect: (String?) -> Unit,
         Spacer(modifier = Modifier.height(4.dp))
         Text("اختار صوت هادئ", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
         if (selectedNoise != null) {
-            Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFFF6B6B).copy(alpha = 0.1f))
-                .clickable { onSelect(null) }.padding(12.dp),
+            Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFFF6B6B).copy(alpha = 0.1f)).clickable { onSelect(null) }.padding(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("🔕", fontSize = 20.sp)
                 Text("إيقاف الصوت", color = Color(0xFFFF6B6B), fontSize = 14.sp)
@@ -329,11 +402,9 @@ private fun TimerNoiseSheet(selectedNoise: String?, onSelect: (String?) -> Unit,
                 .clickable { onSelect(name) }.padding(14.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(emoji, fontSize = 22.sp)
-                Text(name, color = if (selectedNoise == name) PrimaryColor else OnSurface, fontSize = 14.sp, fontWeight = if (selectedNoise == name) FontWeight.Bold else FontWeight.Normal)
-                if (selectedNoise == name) {
-                    Spacer(modifier = Modifier.weight(1f))
-                    Icon(Icons.Default.VolumeUp, contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(16.dp))
-                }
+                Text(name, color = if (selectedNoise == name) PrimaryColor else OnSurface, fontSize = 14.sp,
+                    fontWeight = if (selectedNoise == name) FontWeight.Bold else FontWeight.Normal)
+                if (selectedNoise == name) { Spacer(modifier = Modifier.weight(1f)); Icon(Icons.Default.VolumeUp, contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(16.dp)) }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -341,15 +412,15 @@ private fun TimerNoiseSheet(selectedNoise: String?, onSelect: (String?) -> Unit,
 }
 
 @Composable
-private fun TimerModeSheet(isCountingUp: Boolean, onSelectMode: (Boolean) -> Unit, onDismiss: () -> Unit) {
+private fun TimerModeBottomSheet(isCountingUp: Boolean, onSelectMode: (Boolean) -> Unit, onDismiss: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { onDismiss() })
     Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
         .background(SurfaceColor).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(modifier = Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(OutlineVariant).align(Alignment.CenterHorizontally))
         Spacer(modifier = Modifier.height(4.dp))
         Text("وضع المؤقت", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        TimerModeOption(icon = Icons.Default.HourglassBottom, title = "عد تنازلي", subtitle = "25 دقيقة ← 0", isSelected = !isCountingUp) { onSelectMode(false) }
-        TimerModeOption(icon = Icons.Default.HourglassTop, title = "عد تصاعدي", subtitle = "0 ← ∞ بلا حد", isSelected = isCountingUp) { onSelectMode(true) }
+        TimerModeOption(Icons.Default.HourglassBottom, "عد تنازلي", "25 دقيقة ← 0", !isCountingUp) { onSelectMode(false) }
+        TimerModeOption(Icons.Default.HourglassTop, "عد تصاعدي", "0 ← ∞ بلا حد", isCountingUp) { onSelectMode(true) }
         Spacer(modifier = Modifier.height(8.dp))
     }
 }
