@@ -1,11 +1,17 @@
 package com.noteflow.app.features.timer.presentation
 
+import android.content.Context
+import android.media.RingtoneManager
 import android.os.CountDownTimer
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.noteflow.app.features.timer.data.local.SessionEntity
 import com.noteflow.app.features.timer.data.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -13,7 +19,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TimerViewModel @Inject constructor(
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     companion object {
@@ -67,6 +74,7 @@ class TimerViewModel @Inject constructor(
                 _isRunning.value = false
                 _timeLeft.value = 0
                 _sessionFinished.value = true
+                playAlarmAndVibrate()
                 onSessionFinished()
             }
         }.start()
@@ -99,6 +107,25 @@ class TimerViewModel @Inject constructor(
 
     fun acknowledgeFinished() {
         _sessionFinished.value = false
+    }
+
+    private fun playAlarmAndVibrate() {
+        viewModelScope.launch {
+            try {
+                val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                val ringtone = RingtoneManager.getRingtone(context, ringtoneUri)
+                ringtone?.play()
+                delay(3000)
+                ringtone?.stop()
+            } catch (e: Exception) { }
+
+            try {
+                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                val pattern = longArrayOf(0, 500, 200, 500, 200, 500)
+                vibrator?.vibrate(VibrationEffect.createWaveform(pattern, -1))
+            } catch (e: Exception) { }
+        }
     }
 
     private fun onSessionFinished() {
