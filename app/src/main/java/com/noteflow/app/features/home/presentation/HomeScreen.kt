@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -78,6 +79,7 @@ fun HomeScreen(
     var isWriting by remember { mutableStateOf(false) }
     var timerFullScreen by remember { mutableStateOf(false) }
     var tasksFullScreen by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val greeting = when (hour) {
@@ -86,14 +88,8 @@ fun HomeScreen(
         else -> "مساء الخير"
     }
 
-    val cardsAlpha by animateFloatAsState(
-        targetValue = if (isWriting) 0f else 1f,
-        animationSpec = tween(350), label = "cardsAlpha"
-    )
-    val writeAlpha by animateFloatAsState(
-        targetValue = if (timerFullScreen || tasksFullScreen) 0f else 1f,
-        animationSpec = tween(350), label = "writeAlpha"
-    )
+    val cardsAlpha by animateFloatAsState(targetValue = if (isWriting) 0f else 1f, animationSpec = tween(350), label = "cards")
+    val writeAlpha by animateFloatAsState(targetValue = if (timerFullScreen || tasksFullScreen) 0f else 1f, animationSpec = tween(350), label = "write")
 
     LaunchedEffect(noteTitle, noteContent) {
         if (noteTitle.isNotBlank()) {
@@ -104,157 +100,248 @@ fun HomeScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(BgColor).imePadding()) {
         when {
-            timerFullScreen -> {
-                TimerFullScreen(
-                    timeLeft = timeLeft, isRunning = isRunning, isWorkSession = isWorkSession,
-                    onToggle = { if (isRunning) timerViewModel.pause() else timerViewModel.start() },
-                    onClose = { timerFullScreen = false }
-                )
-            }
-            tasksFullScreen -> {
-                TasksFullScreen(
-                    tasks = tasks,
-                    onToggle = { taskViewModel.toggleComplete(it) },
-                    onClose = { tasksFullScreen = false }
-                )
-            }
+            timerFullScreen -> TimerFullScreen(timeLeft, isRunning, isWorkSession,
+                onToggle = { if (isRunning) timerViewModel.pause() else timerViewModel.start() },
+                onClose = { timerFullScreen = false })
+            tasksFullScreen -> TasksFullScreen(tasks, onToggle = { taskViewModel.toggleComplete(it) }, onClose = { tasksFullScreen = false })
             else -> {
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                     HomeTopBar(greeting, { showRightDrawer = true }, { showLeftDrawer = true }, onNavigateToStats)
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Box(modifier = Modifier.graphicsLayer(alpha = writeAlpha)) {
-                            HomeQuickWrite(
-                                noteTitle = noteTitle, noteContent = noteContent,
-                                onTitleChange = { noteTitle = it },
-                                onContentChange = { noteContent = it },
-                                onFocusChange = { isWriting = it }
-                            )
+                            HomeQuickWrite(noteTitle, noteContent, { noteTitle = it }, { noteContent = it }) { isWriting = it }
                         }
                         if (!isWriting) {
                             Box(modifier = Modifier.graphicsLayer(alpha = cardsAlpha)) {
-                                HomeCardsRow(
-                                    tasks = tasks, timeLeft = timeLeft, isRunning = isRunning, isWorkSession = isWorkSession,
-                                    onToggleTask = { taskViewModel.toggleComplete(it) },
-                                    onTimerToggle = { if (isRunning) timerViewModel.pause() else timerViewModel.start() },
-                                    onTimerFullScreen = { timerFullScreen = true },
-                                    onTasksFullScreen = { tasksFullScreen = true }
-                                )
+                                HomeCardsRow(tasks, timeLeft, isRunning, isWorkSession,
+                                    { taskViewModel.toggleComplete(it) },
+                                    { if (isRunning) timerViewModel.pause() else timerViewModel.start() },
+                                    { timerFullScreen = true }, { tasksFullScreen = true })
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(120.dp))
+                    Spacer(modifier = Modifier.height(140.dp))
                 }
 
-                if (isWriting) {
-                    HomeWritingMiniBar(
-                        tasks = tasks, timeLeft = timeLeft, isRunning = isRunning, isWorkSession = isWorkSession,
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
-                    )
-                } else {
-                    HomeBottomNav(
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                        onAddNote = onAddNote, onNavigateToTasks = onNavigateToTasks,
-                        onNavigateToSearch = onNavigateToSearch, onNavigateToSettings = onNavigateToSettings
-                    )
+                Column(modifier = Modifier.align(Alignment.BottomCenter)) {
+                    if (isWriting) {
+                        ObsidianToolbar(onInsert = { noteContent += it })
+                        HomeWritingMiniBar(tasks, timeLeft, isRunning,
+                            onStop = { isWriting = false; focusManager.clearFocus() })
+                    } else {
+                        HomeBottomNav(
+                            onWrite = { isWriting = true },
+                            onAddNote = onAddNote,
+                            onNavigateToTasks = { tasksFullScreen = true },
+                            onNavigateToSearch = onNavigateToSearch,
+                            onNavigateToSettings = onNavigateToSettings
+                        )
+                    }
                 }
             }
         }
-
         if (showLeftDrawer) HomeLeftDrawer({ showLeftDrawer = false }, onNavigateToNotes, onNavigateToTasks, onNavigateToTimer, onNavigateToStats)
         if (showRightDrawer) HomeRightDrawer({ showRightDrawer = false }, onNavigateToSettings)
     }
 }
 
 @Composable
-private fun HomeQuickWrite(
-    noteTitle: String, noteContent: String,
-    onTitleChange: (String) -> Unit, onContentChange: (String) -> Unit,
-    onFocusChange: (Boolean) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-            .background(SurfaceLowest).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
+private fun ObsidianToolbar(onInsert: (String) -> Unit) {
+    val symbols = listOf("# ", "## ", "### ", "**", "*", "- ", "> ", "[[]]", "`", "---\n", "- [ ] ", "@")
+    Row(
+        modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1A1A))
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // العنوان — Obsidian style
-        BasicTextField(
-            value = noteTitle,
-            onValueChange = onTitleChange,
-            textStyle = TextStyle(
-                color = OnSurface, fontSize = 26.sp,
-                fontWeight = FontWeight.Bold, lineHeight = 34.sp,
-                textAlign = TextAlign.Right
-            ),
-            cursorBrush = SolidColor(PrimaryColor),
-            modifier = Modifier.fillMaxWidth().onFocusChanged { onFocusChange(it.isFocused) },
-            singleLine = true,
-            decorationBox = { inner ->
-                if (noteTitle.isEmpty()) {
-                    Text("✦ العنوان", color = PrimaryColor.copy(alpha = 0.25f),
-                        fontSize = 26.sp, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right)
-                }
-                inner()
+        symbols.forEach { symbol ->
+            Box(
+                modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                    .background(SurfaceHigh).clickable { onInsert(symbol) }
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = when (symbol) {
+                        "# " -> "H1"; "## " -> "H2"; "### " -> "H3"
+                        "**" -> "B"; "*" -> "I"; "- " -> "•"
+                        "> " -> "❝"; "[[]]" -> "[["; "`" -> "<>"
+                        "---\n" -> "—"; "- [ ] " -> "☐"; "@" -> "@"
+                        else -> symbol
+                    },
+                    fontSize = 11.sp, color = PrimaryColor, fontWeight = FontWeight.Bold
+                )
             }
-        )
-
-        // فاصل Obsidian
-        Spacer(modifier = Modifier.height(10.dp))
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, OutlineVariant.copy(alpha = 0.4f), Color.Transparent))))
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // المحتوى
-        BasicTextField(
-            value = noteContent,
-            onValueChange = onContentChange,
-            textStyle = TextStyle(
-                color = OnSurfaceVariant, fontSize = 15.sp,
-                lineHeight = 26.sp, textAlign = TextAlign.Right
-            ),
-            cursorBrush = SolidColor(PrimaryColor),
-            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 120.dp)
-                .onFocusChanged { onFocusChange(it.isFocused) },
-            decorationBox = { inner ->
-                if (noteContent.isEmpty()) {
-                    Text("اكتب أفكارك هنا...", color = OnSurfaceVariant.copy(alpha = 0.25f),
-                        fontSize = 15.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right)
-                }
-                inner()
-            }
-        )
-
-        if (noteTitle.isNotBlank() || noteContent.isNotBlank()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("يحفظ تلقائياً...", fontSize = 10.sp, letterSpacing = 1.sp,
-                color = OutlineVariant, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Left)
         }
     }
 }
 
 @Composable
-private fun HomeWritingMiniBar(tasks: List<Task>, timeLeft: Long, isRunning: Boolean, isWorkSession: Boolean, modifier: Modifier) {
+private fun HomeWritingMiniBar(tasks: List<Task>, timeLeft: Long, isRunning: Boolean, onStop: () -> Unit) {
     val activeTasks = tasks.filter { !it.isCompleted }
     val timerMinutes = (timeLeft / 1000) / 60
     val timerSeconds = (timeLeft / 1000) % 60
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp)
-            .clip(RoundedCornerShape(50.dp)).background(SurfaceColor.copy(alpha = 0.95f))
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(50.dp)).background(SurfaceColor.copy(alpha = 0.97f))
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PrimaryColor.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
-            Text("${activeTasks.size} مهمة", fontSize = 11.sp, color = OnSurfaceVariant)
+        Row(modifier = Modifier.clickable { onStop() }, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Check, contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(14.dp))
+            Text("إنهاء", fontSize = 12.sp, color = PrimaryColor, fontWeight = FontWeight.Bold)
         }
         Box(modifier = Modifier.width(1.dp).height(16.dp).background(OutlineVariant))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(if (isRunning) Icons.Default.Pause else Icons.Default.Timer,
-                contentDescription = null, tint = TertiaryColor.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
-            Text("%02d:%02d".format(timerMinutes, timerSeconds), fontSize = 11.sp, color = OnSurfaceVariant)
+            Icon(Icons.Default.Bolt, contentDescription = null, tint = AccentColor.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+            Text("${activeTasks.size}", fontSize = 12.sp, color = OnSurfaceVariant)
         }
         Box(modifier = Modifier.width(1.dp).height(16.dp).background(OutlineVariant))
-        Text("إنهاء الكتابة", fontSize = 11.sp, color = PrimaryColor)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (isRunning) Icons.Default.Pause else Icons.Default.Timer, contentDescription = null, tint = TertiaryColor.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+            Text("%02d:%02d".format(timerMinutes, timerSeconds), fontSize = 12.sp, color = OnSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun HomeBottomNav(onWrite: () -> Unit, onAddNote: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToSearch: () -> Unit, onNavigateToSettings: () -> Unit) {
+    var fabPressed by remember { mutableStateOf(false) }
+    val fabScale by animateFloatAsState(targetValue = if (fabPressed) 0.85f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "fab")
+    LaunchedEffect(fabPressed) { if (fabPressed) { kotlinx.coroutines.delay(150); fabPressed = false } }
+    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp), contentAlignment = Alignment.Center) {
+        Row(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(Color(0xFF201F1F).copy(alpha = 0.95f)).padding(horizontal = 20.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            // ✏️ كتابة
+            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onWrite() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.EditNote, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(26.dp))
+            }
+            // + إضافة جديدة
+            Box(modifier = Modifier.size(52.dp).scale(fabScale).clip(CircleShape)
+                .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
+                .clickable { fabPressed = true; onAddNote() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF131313), modifier = Modifier.size(26.dp))
+            }
+            // ⚡ مهام
+            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToTasks() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Bolt, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
+            }
+            // 🔍 بحث
+            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSearch() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Search, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
+            }
+            // ⚙️ إعدادات
+            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSettings() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Settings, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeQuickWrite(noteTitle: String, noteContent: String, onTitleChange: (String) -> Unit, onContentChange: (String) -> Unit, onFocusChange: (Boolean) -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(SurfaceLowest).padding(20.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        BasicTextField(value = noteTitle, onValueChange = onTitleChange,
+            textStyle = TextStyle(color = OnSurface, fontSize = 26.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp, textAlign = TextAlign.Right),
+            cursorBrush = SolidColor(PrimaryColor),
+            modifier = Modifier.fillMaxWidth().onFocusChanged { onFocusChange(it.isFocused) }, singleLine = true,
+            decorationBox = { inner ->
+                if (noteTitle.isEmpty()) Text("✦ العنوان", color = PrimaryColor.copy(alpha = 0.25f), fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right)
+                inner()
+            })
+        Spacer(modifier = Modifier.height(10.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, OutlineVariant.copy(alpha = 0.4f), Color.Transparent))))
+        Spacer(modifier = Modifier.height(12.dp))
+        BasicTextField(value = noteContent, onValueChange = onContentChange,
+            textStyle = TextStyle(color = OnSurfaceVariant, fontSize = 15.sp, lineHeight = 26.sp, textAlign = TextAlign.Right),
+            cursorBrush = SolidColor(PrimaryColor),
+            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 120.dp).onFocusChanged { onFocusChange(it.isFocused) },
+            decorationBox = { inner ->
+                if (noteContent.isEmpty()) Text("اكتب أفكارك هنا...", color = OnSurfaceVariant.copy(alpha = 0.25f), fontSize = 15.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right)
+                inner()
+            })
+        if (noteTitle.isNotBlank() || noteContent.isNotBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("يحفظ تلقائياً...", fontSize = 10.sp, letterSpacing = 1.sp, color = OutlineVariant, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Left)
+        }
+    }
+}
+
+@Composable
+private fun HomeCardsRow(tasks: List<Task>, timeLeft: Long, isRunning: Boolean, isWorkSession: Boolean, onToggleTask: (Task) -> Unit, onTimerToggle: () -> Unit, onTimerFullScreen: () -> Unit, onTasksFullScreen: () -> Unit) {
+    val activeTasks = tasks.filter { !it.isCompleted }
+    val completedTasks = tasks.filter { it.isCompleted }
+    val totalTasks = tasks.size
+    val completionRate = if (totalTasks == 0) 0f else completedTasks.size.toFloat() / totalTasks.toFloat()
+    val totalDuration = if (isWorkSession) TimerViewModel.WORK_DURATION else TimerViewModel.BREAK_DURATION
+    val timerProgress = timeLeft.toFloat() / totalDuration.toFloat()
+    val timerMinutes = (timeLeft / 1000) / 60
+    val timerSeconds = (timeLeft / 1000) % 60
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        HomeTasksCard(Modifier.weight(1f), activeTasks, completedTasks, totalTasks, completionRate, onToggleTask, onTasksFullScreen)
+        HomeTimerCard(Modifier.weight(1f), timerMinutes, timerSeconds, timerProgress, isRunning, onTimerToggle, onTimerFullScreen)
+    }
+}
+
+@Composable
+private fun HomeTasksCard(modifier: Modifier, activeTasks: List<Task>, completedTasks: List<Task>, totalTasks: Int, completionRate: Float, onToggleTask: (Task) -> Unit, onFullScreen: () -> Unit) {
+    Column(modifier = modifier.clip(RoundedCornerShape(16.dp)).background(SurfaceColor).clickable { onFullScreen() }.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("اليوم", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnSurface)
+            Text("${completedTasks.size}/$totalTasks", fontSize = 10.sp, color = PrimaryColor)
+        }
+        Box(modifier = Modifier.fillMaxWidth().height(2.dp).clip(RoundedCornerShape(1.dp)).background(SurfaceHigh)) {
+            Box(modifier = Modifier.fillMaxWidth(completionRate).height(2.dp).background(Brush.horizontalGradient(listOf(PrimaryColor, AccentColor))))
+        }
+        val displayTasks = (activeTasks.take(2) + completedTasks.take(1)).take(3)
+        if (displayTasks.isEmpty()) {
+            Text("لا توجد مهام ✨", color = OnSurfaceVariant, fontSize = 12.sp)
+        } else {
+            displayTasks.forEach { task -> AnimatedTaskRow(task, { onToggleTask(task) }) }
+        }
+    }
+}
+
+@Composable
+private fun HomeTimerCard(modifier: Modifier, timerMinutes: Long, timerSeconds: Long, timerProgress: Float, isRunning: Boolean, onTimerToggle: () -> Unit, onFullScreen: () -> Unit) {
+    Column(modifier = modifier.clip(RoundedCornerShape(16.dp)).background(SurfaceColor).clickable { onFullScreen() }.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("تايمر", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnSurface)
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(90.dp), contentAlignment = Alignment.Center) {
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    val strokeWidth = 5.dp.toPx(); val radius = size.minDimension / 2 - strokeWidth
+                    drawArc(color = SurfaceHigh, startAngle = -90f, sweepAngle = 360f, useCenter = false,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth), size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
+                    drawArc(color = TertiaryColor, startAngle = -90f, sweepAngle = 360f * timerProgress, useCenter = false,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth), size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("%02d:%02d".format(timerMinutes, timerSeconds), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = OnSurface)
+                    Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(if (isRunning) TertiaryColor.copy(alpha = 0.2f) else Color.Transparent)
+                        .clickable { onTimerToggle() }, contentAlignment = Alignment.Center) {
+                        Icon(if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null, tint = TertiaryColor, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnimatedTaskRow(task: Task, onToggle: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(modifier = Modifier.size(18.dp).clip(RoundedCornerShape(4.dp))
+            .background(if (task.isCompleted) PrimaryColor else Color.Transparent)
+            .border(1.dp, if (task.isCompleted) Color.Transparent else OutlineVariant, RoundedCornerShape(4.dp))
+            .clickable { onToggle() }, contentAlignment = Alignment.Center) {
+            if (task.isCompleted) Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF1C0062), modifier = Modifier.size(11.dp))
+        }
+        Text(task.title, fontSize = 13.sp, color = if (task.isCompleted) OnSurface.copy(alpha = 0.4f) else OnSurfaceVariant,
+            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f), maxLines = 1)
     }
 }
 
@@ -264,7 +351,6 @@ private fun TimerFullScreen(timeLeft: Long, isRunning: Boolean, isWorkSession: B
     val timerSeconds = (timeLeft / 1000) % 60
     val totalDuration = if (isWorkSession) TimerViewModel.WORK_DURATION else TimerViewModel.BREAK_DURATION
     val timerProgress = timeLeft.toFloat() / totalDuration.toFloat()
-
     Box(modifier = Modifier.fillMaxSize().background(BgColor), contentAlignment = Alignment.Center) {
         IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopStart).padding(16.dp).statusBarsPadding()) {
             Icon(Icons.Default.Close, contentDescription = null, tint = OnSurfaceVariant)
@@ -273,22 +359,17 @@ private fun TimerFullScreen(timeLeft: Long, isRunning: Boolean, isWorkSession: B
             Text(if (isWorkSession) "وقت التركيز" else "وقت الراحة", fontSize = 13.sp, letterSpacing = 2.sp, color = OnSurfaceVariant)
             Box(modifier = Modifier.size(260.dp), contentAlignment = Alignment.Center) {
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 8.dp.toPx()
-                    val radius = size.minDimension / 2 - strokeWidth
+                    val strokeWidth = 8.dp.toPx(); val radius = size.minDimension / 2 - strokeWidth
                     drawArc(color = SurfaceHigh, startAngle = -90f, sweepAngle = 360f, useCenter = false,
                         style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round),
-                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth),
-                        size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
+                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth), size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
                     drawArc(color = TertiaryColor, startAngle = -90f, sweepAngle = 360f * timerProgress, useCenter = false,
                         style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round),
-                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth),
-                        size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
+                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth), size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
                 }
                 Text("%02d:%02d".format(timerMinutes, timerSeconds), fontSize = 52.sp, fontWeight = FontWeight.Bold, color = OnSurface)
             }
-            Box(modifier = Modifier.size(64.dp).clip(CircleShape)
-                .background(if (isRunning) SurfaceHigh else SurfaceColor)
-                .clickable { onToggle() }, contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(if (isRunning) SurfaceHigh else SurfaceColor).clickable { onToggle() }, contentAlignment = Alignment.Center) {
                 Icon(if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null, tint = TertiaryColor, modifier = Modifier.size(32.dp))
             }
         }
@@ -308,16 +389,12 @@ private fun TasksFullScreen(tasks: List<Task>, onToggle: (Task) -> Unit, onClose
             }
             Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (activeTasks.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                        Text("🎉 كل المهام مكتملة!", color = OnSurfaceVariant, fontSize = 16.sp)
-                    }
-                } else {
-                    activeTasks.forEach { task -> FullScreenTaskRow(task, { onToggle(task) }) }
-                }
+                    Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) { Text("🎉 كل المهام مكتملة!", color = OnSurfaceVariant, fontSize = 16.sp) }
+                } else { activeTasks.forEach { task -> FullScreenTaskRow(task) { onToggle(task) } } }
                 if (completedTasks.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("مكتملة", fontSize = 11.sp, letterSpacing = 2.sp, color = OutlineVariant)
-                    completedTasks.take(5).forEach { task -> FullScreenTaskRow(task, { onToggle(task) }) }
+                    completedTasks.take(5).forEach { task -> FullScreenTaskRow(task) { onToggle(task) } }
                 }
             }
         }
@@ -334,128 +411,8 @@ private fun FullScreenTaskRow(task: Task, onToggle: () -> Unit) {
             .clickable { onToggle() }, contentAlignment = Alignment.Center) {
             if (task.isCompleted) Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF1C0062), modifier = Modifier.size(14.dp))
         }
-        Text(task.title, fontSize = 15.sp,
-            color = if (task.isCompleted) OnSurface.copy(alpha = 0.4f) else OnSurface,
-            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-            modifier = Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun HomeCardsRow(
-    tasks: List<Task>, timeLeft: Long, isRunning: Boolean, isWorkSession: Boolean,
-    onToggleTask: (Task) -> Unit, onTimerToggle: () -> Unit,
-    onTimerFullScreen: () -> Unit, onTasksFullScreen: () -> Unit
-) {
-    val activeTasks = tasks.filter { !it.isCompleted }
-    val completedTasks = tasks.filter { it.isCompleted }
-    val totalTasks = tasks.size
-    val completionRate = if (totalTasks == 0) 0f else completedTasks.size.toFloat() / totalTasks.toFloat()
-    val totalDuration = if (isWorkSession) TimerViewModel.WORK_DURATION else TimerViewModel.BREAK_DURATION
-    val timerProgress = timeLeft.toFloat() / totalDuration.toFloat()
-    val timerMinutes = (timeLeft / 1000) / 60
-    val timerSeconds = (timeLeft / 1000) % 60
-
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        HomeTasksCard(Modifier.weight(1f), activeTasks, completedTasks, totalTasks, completionRate, onToggleTask, onTasksFullScreen)
-        HomeTimerCard(Modifier.weight(1f), timerMinutes, timerSeconds, timerProgress, isRunning, onTimerToggle, onTimerFullScreen)
-    }
-}
-
-@Composable
-private fun HomeTasksCard(modifier: Modifier, activeTasks: List<Task>, completedTasks: List<Task>, totalTasks: Int, completionRate: Float, onToggleTask: (Task) -> Unit, onFullScreen: () -> Unit) {
-    Column(modifier = modifier.clip(RoundedCornerShape(16.dp)).background(SurfaceColor).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("اليوم", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("${completedTasks.size}/$totalTasks", fontSize = 10.sp, color = PrimaryColor)
-                Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(SurfaceHigh).clickable { onFullScreen() }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.OpenInFull, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(11.dp))
-                }
-            }
-        }
-        Box(modifier = Modifier.fillMaxWidth().height(2.dp).clip(RoundedCornerShape(1.dp)).background(SurfaceHigh)) {
-            Box(modifier = Modifier.fillMaxWidth(completionRate).height(2.dp).background(Brush.horizontalGradient(listOf(PrimaryColor, AccentColor))))
-        }
-        val displayTasks = (activeTasks.take(2) + completedTasks.take(1)).take(3)
-        if (displayTasks.isEmpty()) {
-            Text("لا توجد مهام ✨", color = OnSurfaceVariant, fontSize = 12.sp)
-        } else {
-            displayTasks.forEach { task -> AnimatedTaskRow(task = task, onToggle = { onToggleTask(task) }) }
-        }
-    }
-}
-
-@Composable
-private fun HomeTimerCard(modifier: Modifier, timerMinutes: Long, timerSeconds: Long, timerProgress: Float, isRunning: Boolean, onTimerToggle: () -> Unit, onFullScreen: () -> Unit) {
-    Column(modifier = modifier.clip(RoundedCornerShape(16.dp)).background(SurfaceColor).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("تايمر", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-            Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(SurfaceHigh).clickable { onFullScreen() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.OpenInFull, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(11.dp))
-            }
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Box(modifier = Modifier.size(90.dp), contentAlignment = Alignment.Center) {
-                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 5.dp.toPx()
-                    val radius = size.minDimension / 2 - strokeWidth
-                    drawArc(color = SurfaceHigh, startAngle = -90f, sweepAngle = 360f, useCenter = false,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round),
-                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth), size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
-                    drawArc(color = TertiaryColor, startAngle = -90f, sweepAngle = 360f * timerProgress, useCenter = false,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round),
-                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth), size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("%02d:%02d".format(timerMinutes, timerSeconds), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-                    Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(if (isRunning) TertiaryColor.copy(alpha = 0.2f) else Color.Transparent).clickable { onTimerToggle() }, contentAlignment = Alignment.Center) {
-                        Icon(if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null, tint = TertiaryColor, modifier = Modifier.size(14.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AnimatedTaskRow(task: Task, onToggle: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(modifier = Modifier.size(18.dp).clip(RoundedCornerShape(4.dp))
-            .background(if (task.isCompleted) PrimaryColor else Color.Transparent)
-            .border(1.dp, if (task.isCompleted) Color.Transparent else OutlineVariant, RoundedCornerShape(4.dp))
-            .clickable { onToggle() }, contentAlignment = Alignment.Center) {
-            if (task.isCompleted) Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF1C0062), modifier = Modifier.size(11.dp))
-        }
-        Text(task.title, fontSize = 13.sp,
-            color = if (task.isCompleted) OnSurface.copy(alpha = 0.4f) else OnSurfaceVariant,
-            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-            modifier = Modifier.weight(1f), maxLines = 1)
-    }
-}
-
-@Composable
-private fun HomeBottomNav(modifier: Modifier, onAddNote: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToSearch: () -> Unit, onNavigateToSettings: () -> Unit) {
-    var fabPressed by remember { mutableStateOf(false) }
-    val fabScale by animateFloatAsState(targetValue = if (fabPressed) 0.85f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "fab")
-    LaunchedEffect(fabPressed) { if (fabPressed) { kotlinx.coroutines.delay(150); fabPressed = false } }
-    Box(modifier = modifier.padding(bottom = 32.dp)) {
-        Row(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(Color(0xFF201F1F).copy(alpha = 0.95f)).padding(horizontal = 20.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(52.dp).scale(fabScale).clip(CircleShape).background(Brush.linearGradient(listOf(PrimaryColor, AccentColor))).clickable { fabPressed = true; onAddNote() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.EditNote, contentDescription = null, tint = Color(0xFF131313), modifier = Modifier.size(26.dp))
-            }
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToTasks() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Bolt, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
-            }
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSearch() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Search, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
-            }
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSettings() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Settings, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
-            }
-        }
+        Text(task.title, fontSize = 15.sp, color = if (task.isCompleted) OnSurface.copy(alpha = 0.4f) else OnSurface,
+            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f))
     }
 }
 
