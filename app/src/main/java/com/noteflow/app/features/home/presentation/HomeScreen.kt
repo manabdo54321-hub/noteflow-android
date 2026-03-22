@@ -125,7 +125,7 @@ fun HomeScreen(
                                 HomeCardsRow(tasks, timeLeft, isRunning, isWorkSession,
                                     { taskViewModel.toggleComplete(it) },
                                     { if (isRunning) timerViewModel.pause() else timerViewModel.start() },
-                                    { timerFullScreen = true }, { tasksFullScreen = true })
+                                    { onNavigateToTimer() }, { tasksFullScreen = true })
                             }
                         }
                     }
