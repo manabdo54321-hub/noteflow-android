@@ -25,8 +25,10 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -73,12 +75,13 @@ fun HomeScreen(
     val isRunning by timerViewModel.isRunning.collectAsState()
     val isWorkSession by timerViewModel.isWorkSession.collectAsState()
     var noteTitle by remember { mutableStateOf("") }
-    var noteContent by remember { mutableStateOf("") }
+    var noteContent by remember { mutableStateOf(TextFieldValue("")) }
     var showLeftDrawer by remember { mutableStateOf(false) }
     var showRightDrawer by remember { mutableStateOf(false) }
     var isWriting by remember { mutableStateOf(false) }
     var timerFullScreen by remember { mutableStateOf(false) }
     var tasksFullScreen by remember { mutableStateOf(false) }
+    var showAddSheet by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -91,10 +94,10 @@ fun HomeScreen(
     val cardsAlpha by animateFloatAsState(targetValue = if (isWriting) 0f else 1f, animationSpec = tween(350), label = "cards")
     val writeAlpha by animateFloatAsState(targetValue = if (timerFullScreen || tasksFullScreen) 0f else 1f, animationSpec = tween(350), label = "write")
 
-    LaunchedEffect(noteTitle, noteContent) {
+    LaunchedEffect(noteTitle, noteContent.text) {
         if (noteTitle.isNotBlank()) {
             kotlinx.coroutines.delay(2000)
-            noteViewModel.triggerAutoSave(noteTitle, noteContent, 0)
+            noteViewModel.triggerAutoSave(noteTitle, noteContent.text, 0)
         }
     }
 
@@ -109,7 +112,13 @@ fun HomeScreen(
                     HomeTopBar(greeting, { showRightDrawer = true }, { showLeftDrawer = true }, onNavigateToStats)
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Box(modifier = Modifier.graphicsLayer(alpha = writeAlpha)) {
-                            HomeQuickWrite(noteTitle, noteContent, { noteTitle = it }, { noteContent = it }) { isWriting = it }
+                            HomeQuickWrite(
+                                noteTitle = noteTitle,
+                                noteContent = noteContent,
+                                onTitleChange = { noteTitle = it },
+                                onContentChange = { noteContent = it },
+                                onFocusChange = { isWriting = it }
+                            )
                         }
                         if (!isWriting) {
                             Box(modifier = Modifier.graphicsLayer(alpha = cardsAlpha)) {
@@ -125,13 +134,13 @@ fun HomeScreen(
 
                 Column(modifier = Modifier.align(Alignment.BottomCenter)) {
                     if (isWriting) {
-                        ObsidianToolbar(onInsert = { noteContent += it })
+                        ObsidianToolbar(noteContent = noteContent, onContentChange = { noteContent = it })
                         HomeWritingMiniBar(tasks, timeLeft, isRunning,
                             onStop = { isWriting = false; focusManager.clearFocus() })
                     } else {
                         HomeBottomNav(
                             onWrite = { isWriting = true },
-                            onAddNote = onAddNote,
+                            onShowAddSheet = { showAddSheet = true },
                             onNavigateToTasks = { tasksFullScreen = true },
                             onNavigateToSearch = onNavigateToSearch,
                             onNavigateToSettings = onNavigateToSettings
@@ -140,37 +149,101 @@ fun HomeScreen(
                 }
             }
         }
+
+        if (showAddSheet) {
+            AddBottomSheet(
+                onDismiss = { showAddSheet = false },
+                onNewNote = { showAddSheet = false; onAddNote() },
+                onNewTask = { showAddSheet = false; tasksFullScreen = true },
+                onStartTimer = { showAddSheet = false; timerFullScreen = true },
+                onNewNote2 = { showAddSheet = false; onNavigateToNotes() }
+            )
+        }
+
         if (showLeftDrawer) HomeLeftDrawer({ showLeftDrawer = false }, onNavigateToNotes, onNavigateToTasks, onNavigateToTimer, onNavigateToStats)
         if (showRightDrawer) HomeRightDrawer({ showRightDrawer = false }, onNavigateToSettings)
     }
 }
 
 @Composable
-private fun ObsidianToolbar(onInsert: (String) -> Unit) {
-    val symbols = listOf("# ", "## ", "### ", "**", "*", "- ", "> ", "[[]]", "`", "---\n", "- [ ] ", "@")
+private fun AddBottomSheet(
+    onDismiss: () -> Unit,
+    onNewNote: () -> Unit,
+    onNewTask: () -> Unit,
+    onStartTimer: () -> Unit,
+    onNewNote2: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { onDismiss() })
+    Column(
+        modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)
+            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+            .background(Color(0xFF1C1B1B)).padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(modifier = Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(OutlineVariant).align(Alignment.CenterHorizontally))
+        Spacer(modifier = Modifier.height(4.dp))
+        AddSheetItem(Icons.Default.EditNote, "ملاحظة جديدة", "ابدأ كتابة فكرة جديدة", PrimaryColor) { onNewNote() }
+        AddSheetItem(Icons.Default.CheckCircle, "مهمة جديدة", "أضف مهمة لقائمتك", AccentColor) { onNewTask() }
+        AddSheetItem(Icons.Default.Timer, "ابدأ جلسة تركيز", "بومودورو 25 دقيقة", TertiaryColor) { onStartTimer() }
+        AddSheetItem(Icons.Default.Notes, "كل الملاحظات", "تصفح ملاحظاتك", OnSurfaceVariant) { onNewNote2() }
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun AddSheetItem(icon: ImageVector, title: String, subtitle: String, color: Color, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1A1A))
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+            .background(SurfaceHigh).clickable { onClick() }.padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(color.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+        }
+        Column {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = OnSurface)
+            Text(subtitle, fontSize = 12.sp, color = OnSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ObsidianToolbar(noteContent: TextFieldValue, onContentChange: (TextFieldValue) -> Unit) {
+    val symbols = listOf("# ", "## ", "### ", "**text**", "*text*", "- ", "> ", "[[]]", "`code`", "---\n", "- [ ] ", "@")
+    val labels = listOf("H1", "H2", "H3", "B", "I", "•", "❝", "[[", "<>", "—", "☐", "@")
+
+    Row(
+        modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1A1A)).padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        symbols.forEach { symbol ->
+        symbols.forEachIndexed { index, symbol ->
             Box(
-                modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                    .background(SurfaceHigh).clickable { onInsert(symbol) }
+                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(SurfaceHigh)
+                    .clickable {
+                        val cursor = noteContent.selection.end
+                        val text = noteContent.text
+                        val insertion = when (symbol) {
+                            "**text**" -> "****"
+                            "*text*" -> "**"
+                            "`code`" -> "``"
+                            else -> symbol
+                        }
+                        val newText = text.substring(0, cursor) + insertion + text.substring(cursor)
+                        val newCursor = when (symbol) {
+                            "**text**" -> cursor + 2
+                            "*text*" -> cursor + 1
+                            "`code`" -> cursor + 1
+                            "[[]]" -> cursor + 2
+                            else -> cursor + insertion.length
+                        }
+                        onContentChange(TextFieldValue(newText, TextRange(newCursor)))
+                    }
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = when (symbol) {
-                        "# " -> "H1"; "## " -> "H2"; "### " -> "H3"
-                        "**" -> "B"; "*" -> "I"; "- " -> "•"
-                        "> " -> "❝"; "[[]]" -> "[["; "`" -> "<>"
-                        "---\n" -> "—"; "- [ ] " -> "☐"; "@" -> "@"
-                        else -> symbol
-                    },
-                    fontSize = 11.sp, color = PrimaryColor, fontWeight = FontWeight.Bold
-                )
+                Text(labels[index], fontSize = 11.sp, color = PrimaryColor, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -206,32 +279,27 @@ private fun HomeWritingMiniBar(tasks: List<Task>, timeLeft: Long, isRunning: Boo
 }
 
 @Composable
-private fun HomeBottomNav(onWrite: () -> Unit, onAddNote: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToSearch: () -> Unit, onNavigateToSettings: () -> Unit) {
+private fun HomeBottomNav(onWrite: () -> Unit, onShowAddSheet: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToSearch: () -> Unit, onNavigateToSettings: () -> Unit) {
     var fabPressed by remember { mutableStateOf(false) }
     val fabScale by animateFloatAsState(targetValue = if (fabPressed) 0.85f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "fab")
     LaunchedEffect(fabPressed) { if (fabPressed) { kotlinx.coroutines.delay(150); fabPressed = false } }
     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp), contentAlignment = Alignment.Center) {
         Row(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(Color(0xFF201F1F).copy(alpha = 0.95f)).padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            // ✏️ كتابة
             Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onWrite() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.EditNote, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(26.dp))
             }
-            // + إضافة جديدة
-            Box(modifier = Modifier.size(52.dp).scale(fabScale).clip(CircleShape)
-                .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
-                .clickable { fabPressed = true; onAddNote() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF131313), modifier = Modifier.size(26.dp))
-            }
-            // ⚡ مهام
             Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToTasks() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Bolt, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
             }
-            // 🔍 بحث
+            Box(modifier = Modifier.size(60.dp).scale(fabScale).clip(CircleShape)
+                .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
+                .clickable { fabPressed = true; onShowAddSheet() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF131313), modifier = Modifier.size(28.dp))
+            }
             Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSearch() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Search, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
             }
-            // ⚙️ إعدادات
             Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSettings() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Settings, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
             }
@@ -240,8 +308,8 @@ private fun HomeBottomNav(onWrite: () -> Unit, onAddNote: () -> Unit, onNavigate
 }
 
 @Composable
-private fun HomeQuickWrite(noteTitle: String, noteContent: String, onTitleChange: (String) -> Unit, onContentChange: (String) -> Unit, onFocusChange: (Boolean) -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(SurfaceLowest).padding(20.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+private fun HomeQuickWrite(noteTitle: String, noteContent: TextFieldValue, onTitleChange: (String) -> Unit, onContentChange: (TextFieldValue) -> Unit, onFocusChange: (Boolean) -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(SurfaceLowest).padding(20.dp)) {
         BasicTextField(value = noteTitle, onValueChange = onTitleChange,
             textStyle = TextStyle(color = OnSurface, fontSize = 26.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp, textAlign = TextAlign.Right),
             cursorBrush = SolidColor(PrimaryColor),
@@ -258,10 +326,10 @@ private fun HomeQuickWrite(noteTitle: String, noteContent: String, onTitleChange
             cursorBrush = SolidColor(PrimaryColor),
             modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 120.dp).onFocusChanged { onFocusChange(it.isFocused) },
             decorationBox = { inner ->
-                if (noteContent.isEmpty()) Text("اكتب أفكارك هنا...", color = OnSurfaceVariant.copy(alpha = 0.25f), fontSize = 15.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right)
+                if (noteContent.text.isEmpty()) Text("اكتب أفكارك هنا...", color = OnSurfaceVariant.copy(alpha = 0.25f), fontSize = 15.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right)
                 inner()
             })
-        if (noteTitle.isNotBlank() || noteContent.isNotBlank()) {
+        if (noteTitle.isNotBlank() || noteContent.text.isNotBlank()) {
             Spacer(modifier = Modifier.height(8.dp))
             Text("يحفظ تلقائياً...", fontSize = 10.sp, letterSpacing = 1.sp, color = OutlineVariant, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Left)
         }
@@ -295,11 +363,8 @@ private fun HomeTasksCard(modifier: Modifier, activeTasks: List<Task>, completed
             Box(modifier = Modifier.fillMaxWidth(completionRate).height(2.dp).background(Brush.horizontalGradient(listOf(PrimaryColor, AccentColor))))
         }
         val displayTasks = (activeTasks.take(2) + completedTasks.take(1)).take(3)
-        if (displayTasks.isEmpty()) {
-            Text("لا توجد مهام ✨", color = OnSurfaceVariant, fontSize = 12.sp)
-        } else {
-            displayTasks.forEach { task -> AnimatedTaskRow(task, { onToggleTask(task) }) }
-        }
+        if (displayTasks.isEmpty()) Text("لا توجد مهام ✨", color = OnSurfaceVariant, fontSize = 12.sp)
+        else displayTasks.forEach { task -> AnimatedTaskRow(task) { onToggleTask(task) } }
     }
 }
 
@@ -321,8 +386,7 @@ private fun HomeTimerCard(modifier: Modifier, timerMinutes: Long, timerSeconds: 
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("%02d:%02d".format(timerMinutes, timerSeconds), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = OnSurface)
-                    Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(if (isRunning) TertiaryColor.copy(alpha = 0.2f) else Color.Transparent)
-                        .clickable { onTimerToggle() }, contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(if (isRunning) TertiaryColor.copy(alpha = 0.2f) else Color.Transparent).clickable { onTimerToggle() }, contentAlignment = Alignment.Center) {
                         Icon(if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null, tint = TertiaryColor, modifier = Modifier.size(14.dp))
                     }
                 }
