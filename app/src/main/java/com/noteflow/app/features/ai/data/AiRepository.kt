@@ -14,11 +14,10 @@ import javax.inject.Singleton
 
 data class AiMessage(val role: String, val text: String)
 
-data class GeminiRequest(val contents: List<GeminiContent>)
-data class GeminiContent(val role: String, val parts: List<GeminiPart>)
-data class GeminiPart(val text: String)
-data class GeminiResponse(val candidates: List<GeminiCandidate>?)
-data class GeminiCandidate(val content: GeminiContent?)
+data class GroqRequest(val model: String, val messages: List<GroqMessage>)
+data class GroqMessage(val role: String, val content: String)
+data class GroqResponse(val choices: List<GroqChoice>?)
+data class GroqChoice(val message: GroqMessage?)
 
 @Singleton
 class AiRepository @Inject constructor() {
@@ -29,8 +28,8 @@ class AiRepository @Inject constructor() {
         .build()
 
     private val gson = Gson()
-    private val apiKey = "AIzaSyBpIp1aeGXK6wY9ZCrRSOzN_pS7OR6ywOo"
-    private val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
+    private val apiKey = com.noteflow.app.BuildConfig.GROQ_API_KEY
+    private val url = "https://api.groq.com/openai/v1/chat/completions"
 
     suspend fun sendMessage(
         history: List<AiMessage>,
@@ -38,26 +37,32 @@ class AiRepository @Inject constructor() {
         systemContext: String
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val contents = mutableListOf<GeminiContent>()
+            val messages = mutableListOf<GroqMessage>()
 
             if (systemContext.isNotBlank()) {
-                contents.add(GeminiContent(role = "user", parts = listOf(GeminiPart(systemContext))))
-                contents.add(GeminiContent(role = "model", parts = listOf(GeminiPart("فهمت! أنا جاهز أساعدك."))))
+                messages.add(GroqMessage(role = "system", content = systemContext))
             }
 
             history.forEach { msg ->
-                contents.add(GeminiContent(
-                    role = if (msg.role == "user") "user" else "model",
-                    parts = listOf(GeminiPart(msg.text))
+                messages.add(GroqMessage(
+                    role = if (msg.role == "user") "user" else "assistant",
+                    content = msg.text
                 ))
             }
 
-            contents.add(GeminiContent(role = "user", parts = listOf(GeminiPart(userMessage))))
+            messages.add(GroqMessage(role = "user", content = userMessage))
 
-            val body = gson.toJson(GeminiRequest(contents))
-                .toRequestBody("application/json".toMediaType())
+            val body = gson.toJson(GroqRequest(
+                model = "llama-3.3-70b-versatile",
+                messages = messages
+            )).toRequestBody("application/json".toMediaType())
 
-            val request = Request.Builder().url(url).post(body).build()
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer $apiKey")
+                .post(body)
+                .build()
+
             val response = client.newCall(request).execute()
             val responseBody = response.body?.string() ?: ""
 
@@ -65,8 +70,8 @@ class AiRepository @Inject constructor() {
                 return@withContext Result.failure(Exception("خطأ ${response.code}: $responseBody"))
             }
 
-            val geminiResponse = gson.fromJson(responseBody, GeminiResponse::class.java)
-            val text = geminiResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+            val groqResponse = gson.fromJson(responseBody, GroqResponse::class.java)
+            val text = groqResponse.choices?.firstOrNull()?.message?.content
                 ?: "مفيش رد من الـ AI"
 
             Result.success(text)
