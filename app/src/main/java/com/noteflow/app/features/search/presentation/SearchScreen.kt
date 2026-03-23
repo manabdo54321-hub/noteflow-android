@@ -1,13 +1,11 @@
 package com.noteflow.app.features.search.presentation
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -16,428 +14,341 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.runtime.collectAsState
-import com.noteflow.app.features.notes.data.local.NoteEntity
-import com.noteflow.app.features.tasks.data.local.TaskEntity
-import java.text.SimpleDateFormat
-import java.util.*
+import com.noteflow.app.features.notes.presentation.NoteViewModel
+import com.noteflow.app.features.stats.presentation.StatsViewModel
 
-// ── الألوان ──────────────────────────────────────
-private val BgColor       = Color(0xFF131313)
-private val SurfaceColor  = Color(0xFF1C1B1B)
-private val SurfaceHigh   = Color(0xFF2A2A2A)
-private val PrimaryColor  = Color(0xFFCABEFF)
-private val AccentColor   = Color(0xFF8A70FF)
+private val BgColor = Color(0xFF131313)
+private val SurfaceColor = Color(0xFF1C1B1B)
+private val SurfaceHigh = Color(0xFF2A2A2A)
+private val PrimaryColor = Color(0xFFCABEFF)
+private val AccentColor = Color(0xFF8A70FF)
+private val OnSurface = Color(0xFFE5E2E1)
+private val OnSurfaceVariant = Color(0xFFC8C5CD)
+private val OutlineVariant = Color(0xFF47464C)
 private val TertiaryColor = Color(0xFF75D1FF)
-private val TextPrimary   = Color(0xFFE8E8E8)
-private val TextSecondary = Color(0xFF9A9A9A)
 
-// ── 1. الشاشة الرئيسية ───────────────────────────
 @Composable
 fun SearchScreen(
-    onNavigateBack: () -> Unit,
+    onBack: () -> Unit,
     onNoteClick: (Long) -> Unit,
-    viewModel: SearchViewModel = hiltViewModel()
+    noteViewModel: NoteViewModel = hiltViewModel(),
+    statsViewModel: StatsViewModel = hiltViewModel()
 ) {
-    val query        by viewModel.query.collectAsState()
-    val activeFilter by viewModel.activeFilter.collectAsState()
-    val noteResults  by viewModel.noteResults.collectAsState()
-    val taskResults  by viewModel.taskResults.collectAsState()
-    val focusRequester = remember { FocusRequester() }
+    val notes by noteViewModel.notes.collectAsState()
+    val allTasks by statsViewModel.allTasks.collectAsState()
 
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    var query by remember { mutableStateOf("") }
+    var selectedFilter by remember { mutableStateOf("الكل") }
+    val filters = listOf("الكل", "ملاحظات", "مهام")
+
+    val filteredNotes = if (query.isBlank()) emptyList()
+        else notes.filter {
+            it.title.contains(query, ignoreCase = true) ||
+            it.content.contains(query, ignoreCase = true)
+        }
+
+    val filteredTasks = if (query.isBlank()) emptyList()
+        else allTasks.filter {
+            it.title.contains(query, ignoreCase = true)
+        }
+
+    val showNotes = selectedFilter == "الكل" || selectedFilter == "ملاحظات"
+    val showTasks = selectedFilter == "الكل" || selectedFilter == "مهام"
+
+    val totalResults = (if (showNotes) filteredNotes.size else 0) +
+            (if (showTasks) filteredTasks.size else 0)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(BgColor)
-            .statusBarsPadding()
-            .navigationBarsPadding()
     ) {
-        SearchTopBar(
-            query          = query,
-            onQueryChange  = viewModel::onQueryChange,
-            onClearQuery   = viewModel::clearQuery,
-            onNavigateBack = onNavigateBack,
-            focusRequester = focusRequester
-        )
-
-        AnimatedVisibility(visible = query.length >= 2) {
-            SearchFilterChips(
-                activeFilter   = activeFilter,
-                noteCount      = noteResults.size,
-                taskCount      = taskResults.size,
-                onFilterChange = viewModel::onFilterChange
-            )
-        }
-
-        val showEmpty = query.length >= 2
-            && noteResults.isEmpty()
-            && taskResults.isEmpty()
-
-        if (showEmpty) {
-            SearchEmptyState(query = query)
-        } else {
-            SearchResultsContent(
-                query        = query,
-                activeFilter = activeFilter,
-                noteResults  = noteResults,
-                taskResults  = taskResults,
-                onNoteClick  = onNoteClick
-            )
-        }
-    }
-}
-
-// ── 2. شريط البحث ────────────────────────────────
-@Composable
-fun SearchTopBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClearQuery: () -> Unit,
-    onNavigateBack: () -> Unit,
-    focusRequester: FocusRequester
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onNavigateBack) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "رجوع",
-                tint = TextSecondary
-            )
-        }
-
+        // TopBar
         Row(
             modifier = Modifier
-                .weight(1f)
-                .background(SurfaceColor, RoundedCornerShape(14.dp))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .fillMaxWidth()
+                .background(Color(0xFF1C1B1B))
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                tint = TextSecondary,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(modifier = Modifier.weight(1f)) {
-                if (query.isEmpty()) {
-                    Text(
-                        text = "ابحث في الملاحظات والمهام...",
-                        color = TextSecondary,
-                        fontSize = 14.sp
-                    )
-                }
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = null,
+                    tint = OnSurfaceVariant)
+            }
+
+            // Search Field
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfaceHigh)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null,
+                    tint = OnSurfaceVariant, modifier = Modifier.size(18.dp))
                 BasicTextField(
                     value = query,
-                    onValueChange = onQueryChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester),
-                    textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp),
+                    onValueChange = { query = it },
+                    textStyle = TextStyle(color = OnSurface, fontSize = 16.sp),
                     cursorBrush = SolidColor(PrimaryColor),
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { inner ->
+                        if (query.isEmpty()) {
+                            Text("ابحث في كل حاجة...",
+                                color = OnSurfaceVariant, fontSize = 16.sp)
+                        }
+                        inner()
+                    }
                 )
-            }
-            AnimatedVisibility(visible = query.isNotEmpty(), enter = fadeIn(), exit = fadeOut()) {
-                IconButton(onClick = onClearQuery, modifier = Modifier.size(20.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "مسح",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
+                if (query.isNotEmpty()) {
+                    Icon(Icons.Default.Close, contentDescription = null,
+                        tint = OnSurfaceVariant, modifier = Modifier.size(18.dp)
+                            .clickable { query = "" })
                 }
             }
         }
-    }
-}
 
-// ── 3. أزرار الفلترة ─────────────────────────────
-@Composable
-fun SearchFilterChips(
-    activeFilter: String,
-    noteCount: Int,
-    taskCount: Int,
-    onFilterChange: (String) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        listOf(
-            Triple("all",   "الكل",    noteCount + taskCount),
-            Triple("notes", "ملاحظات", noteCount),
-            Triple("tasks", "مهام",    taskCount)
-        ).forEach { (key, label, count) ->
-            val selected = activeFilter == key
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (selected) AccentColor.copy(alpha = 0.2f) else SurfaceColor,
-                        RoundedCornerShape(20.dp)
-                    )
-                    .clickable { onFilterChange(key) }
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = if (count > 0) "$label ($count)" else label,
-                    color = if (selected) PrimaryColor else TextSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
-                )
-            }
-        }
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(0.5.dp)
-            .background(SurfaceHigh)
-    )
-}
-
-// ── 4. قائمة النتائج ─────────────────────────────
-@Composable
-fun SearchResultsContent(
-    query: String,
-    activeFilter: String,
-    noteResults: List<NoteEntity>,
-    taskResults: List<TaskEntity>,
-    onNoteClick: (Long) -> Unit
-) {
-    val showNotes = activeFilter == "all" || activeFilter == "notes"
-    val showTasks = activeFilter == "all" || activeFilter == "tasks"
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 8.dp)
-    ) {
-        if (showNotes && noteResults.isNotEmpty()) {
-            item {
-                SearchSectionLabel(
-                    icon  = Icons.Default.Article,
-                    label = "ملاحظات",
-                    color = PrimaryColor
-                )
-            }
-            items(noteResults, key = { it.id }) { note ->
-                SearchNoteItem(note = note, query = query, onNoteClick = onNoteClick)
-            }
-        }
-        if (showTasks && taskResults.isNotEmpty()) {
-            item {
-                SearchSectionLabel(
-                    icon  = Icons.Default.CheckCircleOutline,
-                    label = "مهام",
-                    color = TertiaryColor
-                )
-            }
-            items(taskResults, key = { it.id }) { task ->
-                SearchTaskItem(task = task, query = query)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SearchSectionLabel(icon: ImageVector, label: String, color: Color) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = color.copy(alpha = 0.7f),
-            modifier = Modifier.size(14.dp)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = label,
-            color = color.copy(alpha = 0.7f),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 0.5.sp
-        )
-    }
-}
-
-// ── 5. بطاقة ملاحظة ──────────────────────────────
-@Composable
-fun SearchNoteItem(
-    note: NoteEntity,
-    query: String,
-    onNoteClick: (Long) -> Unit
-) {
-    val dateFormat = remember { SimpleDateFormat("d MMM", Locale("ar")) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onNoteClick(note.id) }
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-    ) {
+        // Filters
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = highlightQuery(note.title.ifEmpty { "بدون عنوان" }, query),
-                color = TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = dateFormat.format(Date(note.updatedAt)),
-                color = TextSecondary,
-                fontSize = 11.sp
-            )
-        }
-        if (note.content.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = highlightQuery(note.content.take(120), query),
-                color = TextSecondary,
-                fontSize = 12.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 18.sp
-            )
-        }
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .height(0.5.dp)
-            .background(SurfaceHigh.copy(alpha = 0.6f))
-    )
-}
-
-// ── 6. بطاقة مهمة ────────────────────────────────
-@Composable
-fun SearchTaskItem(task: TaskEntity, query: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = if (task.isCompleted)
-                Icons.Default.CheckCircle
-            else
-                Icons.Default.RadioButtonUnchecked,
-            contentDescription = null,
-            tint = if (task.isCompleted)
-                TertiaryColor.copy(alpha = 0.6f)
-            else
-                TextSecondary,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = highlightQuery(task.title, query),
-            color = if (task.isCompleted) TextSecondary else TextPrimary,
-            fontSize = 13.sp,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .height(0.5.dp)
-            .background(SurfaceHigh.copy(alpha = 0.6f))
-    )
-}
-
-// ── 7. حالة لا يوجد نتائج ────────────────────────
-@Composable
-fun SearchEmptyState(query: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 80.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.SearchOff,
-            contentDescription = null,
-            tint = TextSecondary.copy(alpha = 0.4f),
-            modifier = Modifier.size(52.dp)
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-        Text(
-            text = "لا نتائج لـ \"$query\"",
-            color = TextSecondary,
-            fontSize = 14.sp
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "جرّب كلمة مختلفة",
-            color = TextSecondary.copy(alpha = 0.5f),
-            fontSize = 12.sp
-        )
-    }
-}
-
-// ── دالة تظليل كلمة البحث ────────────────────────
-@Composable
-private fun highlightQuery(text: String, query: String): AnnotatedString {
-    if (query.length < 2) return buildAnnotatedString { append(text) }
-    return buildAnnotatedString {
-        val lower = text.lowercase()
-        val lowerQuery = query.lowercase()
-        var start = 0
-        while (start < text.length) {
-            val idx = lower.indexOf(lowerQuery, start)
-            if (idx == -1) {
-                append(text.substring(start))
-                break
+            filters.forEach { filter ->
+                val isSelected = filter == selectedFilter
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            if (isSelected) PrimaryColor.copy(alpha = 0.2f)
+                            else SurfaceColor
+                        )
+                        .then(
+                            if (isSelected) Modifier
+                            else Modifier
+                        )
+                        .clickable { selectedFilter = filter }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(filter, fontSize = 13.sp,
+                        color = if (isSelected) PrimaryColor else OnSurfaceVariant,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                }
             }
-            append(text.substring(start, idx))
-            withStyle(
-                SpanStyle(
-                    color = PrimaryColor,
-                    fontWeight = FontWeight.Bold,
-                    background = PrimaryColor.copy(alpha = 0.12f)
-                )
-            ) {
-                append(text.substring(idx, idx + query.length))
+        }
+
+        // Results
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (query.isBlank()) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(64.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(Icons.Default.Search, contentDescription = null,
+                                tint = OutlineVariant, modifier = Modifier.size(48.dp))
+                            Text("ابحث في ملاحظاتك ومهامك",
+                                color = OutlineVariant, fontSize = 14.sp)
+                        }
+                    }
+                }
+            } else if (totalResults == 0) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(64.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("🔍", fontSize = 48.sp)
+                            Text("لا توجد نتائج لـ \"$query\"",
+                                color = OutlineVariant, fontSize = 14.sp)
+                        }
+                    }
+                }
+            } else {
+                // عدد النتائج
+                item {
+                    Text("$totalResults نتيجة",
+                        fontSize = 12.sp, color = OutlineVariant,
+                        modifier = Modifier.padding(vertical = 4.dp))
+                }
+
+                // الملاحظات
+                if (showNotes && filteredNotes.isNotEmpty()) {
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Default.Notes, contentDescription = null,
+                                tint = PrimaryColor, modifier = Modifier.size(16.dp))
+                            Text("ملاحظات (${filteredNotes.size})",
+                                fontSize = 12.sp, color = PrimaryColor,
+                                fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        }
+                    }
+                    items(filteredNotes) { note ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(SurfaceColor)
+                                .clickable { onNoteClick(note.id) }
+                                .padding(16.dp)
+                        ) {
+                            // Highlight العنوان
+                            Text(
+                                text = note.title,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                fontSize = 15.sp
+                            )
+                            if (note.content.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                // بيظهر الجزء اللي فيه الكلمة
+                                val contentPreview = if (note.content.contains(query, ignoreCase = true)) {
+                                    val idx = note.content.indexOf(query, ignoreCase = true)
+                                    val start = maxOf(0, idx - 30)
+                                    val end = minOf(note.content.length, idx + query.length + 60)
+                                    "...${note.content.substring(start, end)}..."
+                                } else {
+                                    note.content.take(80)
+                                }
+                                Text(contentPreview, fontSize = 13.sp,
+                                    color = OnSurfaceVariant, lineHeight = 20.sp)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Notes, contentDescription = null,
+                                    tint = PrimaryColor.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(12.dp))
+                                Text("ملاحظة", fontSize = 11.sp,
+                                    color = PrimaryColor.copy(alpha = 0.6f))
+                            }
+                        }
+                    }
+                }
+
+                // المهام
+                if (showTasks && filteredTasks.isNotEmpty()) {
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null,
+                                tint = TertiaryColor, modifier = Modifier.size(16.dp))
+                            Text("مهام (${filteredTasks.size})",
+                                fontSize = 12.sp, color = TertiaryColor,
+                                fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        }
+                    }
+                    items(filteredTasks) { task ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(SurfaceColor)
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(
+                                        if (task.isCompleted) PrimaryColor
+                                        else Color.Transparent
+                                    )
+                                    .then(
+                                        if (!task.isCompleted)
+                                            Modifier.background(Color.Transparent)
+                                        else Modifier
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (task.isCompleted) {
+                                    Icon(Icons.Default.Check, contentDescription = null,
+                                        tint = Color(0xFF1C0062),
+                                        modifier = Modifier.size(13.dp))
+                                } else {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize()
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color.Transparent)
+                                            .then(
+                                                Modifier.background(
+                                                    Color.Transparent
+                                                )
+                                            )
+                                    ) {
+                                        androidx.compose.foundation.Canvas(
+                                            modifier = Modifier.fillMaxSize()
+                                        ) {
+                                            drawRoundRect(
+                                                color = OutlineVariant,
+                                                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                                    width = 1.dp.toPx()
+                                                ),
+                                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(
+                                                    4.dp.toPx()
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = task.title,
+                                    fontSize = 15.sp,
+                                    color = if (task.isCompleted)
+                                        OnSurface.copy(alpha = 0.4f) else Color.White,
+                                    textDecoration = if (task.isCompleted)
+                                        TextDecoration.LineThrough else null
+                                )
+                            }
+                            // Priority badge
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(TertiaryColor.copy(alpha = 0.15f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text("مهمة", fontSize = 10.sp, color = TertiaryColor)
+                            }
+                        }
+                    }
+                }
             }
-            start = idx + query.length
         }
     }
 }

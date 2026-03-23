@@ -63,7 +63,7 @@ fun AppNavigation(
                 val id = backStack.arguments?.getLong("noteId") ?: 0L
                 NoteDetailScreen(
                     noteId = id,
-                    onNavigateBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() },
                     onNavigateToNote = { targetId -> navController.navigate("note/$targetId") }
                 )
             }
@@ -72,7 +72,7 @@ fun AppNavigation(
             }
             composable("timer") {
                 TimerScreen(
-                    onNavigateBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() },
                     timerViewModel = timerViewModel
                 )
             }
@@ -80,7 +80,7 @@ fun AppNavigation(
             composable("settings") { SettingsScreen() }
             composable("search") {
                 SearchScreen(
-                    onNavigateBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() },
                     onNoteClick = { id -> navController.navigate("note/$id") }
                 )
             }

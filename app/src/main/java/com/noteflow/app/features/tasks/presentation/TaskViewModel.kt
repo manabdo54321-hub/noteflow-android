@@ -2,8 +2,8 @@ package com.noteflow.app.features.tasks.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.noteflow.app.features.tasks.data.local.TaskEntity
 import com.noteflow.app.features.tasks.data.repository.TaskRepository
+import com.noteflow.app.features.tasks.domain.model.Task
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,43 +16,31 @@ class TaskViewModel @Inject constructor(
     private val repository: TaskRepository
 ) : ViewModel() {
 
-    val tasks: StateFlow<List<TaskEntity>> = repository.getAllTasks()
+    val tasks: StateFlow<List<Task>> = repository.getAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun saveTask(title: String, noteId: Long? = null, id: Long = 0) {
         if (title.isBlank()) return
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
-            val task = TaskEntity(
-                id = id,
-                title = title.trim(),
-                noteId = noteId,
-                isCompleted = false,
-                priority = "MEDIUM",
-                dueDate = null,
-                pomodoroCount = 0,
-                createdAt = now
-            )
-            if (id == 0L) repository.insertTask(task)
-            else repository.updateTask(task)
+            repository.saveTask(Task(id = id, title = title.trim(), noteId = noteId))
         }
     }
 
-    fun toggleComplete(task: TaskEntity) {
+    fun toggleComplete(task: Task) {
         viewModelScope.launch {
-            repository.updateTask(task.copy(isCompleted = !task.isCompleted))
+            repository.setCompleted(task.id, !task.isCompleted)
         }
     }
 
-    fun deleteTask(task: TaskEntity) {
+    fun deleteTask(task: Task) {
         viewModelScope.launch {
             repository.deleteTask(task)
         }
     }
 
-    fun incrementPomodoro(task: TaskEntity) {
+    fun incrementPomodoro(taskId: Long) {
         viewModelScope.launch {
-            repository.updateTask(task.copy(pomodoroCount = task.pomodoroCount + 1))
+            repository.incrementPomodoro(taskId)
         }
     }
 }
