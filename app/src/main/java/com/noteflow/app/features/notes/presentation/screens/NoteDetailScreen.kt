@@ -162,7 +162,6 @@ fun NoteDetailScreen(
         }
 
         NoteDetailObsidianToolbar(isEditMode, content) { content = it }
-        }
     }
 
     if (showDeleteDialog) {
