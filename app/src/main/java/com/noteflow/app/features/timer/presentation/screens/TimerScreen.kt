@@ -231,7 +231,6 @@ fun TimerScreen(
     }
 }
 
-@Composable
 
 @Composable
 private fun StrictModeItem(icon: ImageVector, title: String, subtitle: String, isAvailable: Boolean, isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
@@ -532,6 +531,7 @@ private fun TimerModeOption(icon: ImageVector, title: String, subtitle: String, 
     }
 }
 
+@Composable
 private fun StrictModeSheet(
     flipPhone: Boolean, dnd: Boolean, noExit: Boolean,
     onFlipChange: (Boolean) -> Unit, onDndChange: (Boolean) -> Unit, onNoExitChange: (Boolean) -> Unit,
