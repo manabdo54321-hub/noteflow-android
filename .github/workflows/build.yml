@@ -21,6 +21,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Add API Keys
+        run: echo "groq_api_key=${{ secrets.GROQ_API_KEY }}" >> gradle.properties
+
       - name: Build APK
         run: ./gradlew assembleDebug
 

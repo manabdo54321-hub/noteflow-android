@@ -12,16 +12,9 @@ val commitCount = try {
     1
 }
 
-android {
+val groqKey = providers.gradleProperty("groq_api_key").orElse("").get()
 
-    val groqKey = rootProject.file("local.properties")
-        .takeIf { it.exists() }
-        ?.inputStream()
-        ?.use { stream ->
-            val p = java.util.Properties()
-            p.load(stream)
-            p.getProperty("groq_api_key", "")
-        } ?: ""
+android {
 
     namespace = "com.noteflow.app"
     compileSdk = 34
