@@ -16,6 +16,7 @@ import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteListScreen
 import com.noteflow.app.features.search.presentation.SearchScreen
 import com.noteflow.app.features.ai.presentation.AiScreen
+import com.noteflow.app.features.ai.presentation.AiViewModel
 import com.noteflow.app.features.settings.presentation.screens.SettingsScreen
 import com.noteflow.app.features.stats.presentation.screens.StatsScreen
 import com.noteflow.app.features.tasks.presentation.screens.TaskListScreen
@@ -31,6 +32,7 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     val timerViewModel: TimerViewModel = hiltViewModel()
+    val aiViewModel: AiViewModel = hiltViewModel()
 
     Scaffold(containerColor = BgColor) { padding ->
         NavHost(
@@ -81,7 +83,9 @@ fun AppNavigation(
             composable("stats") { StatsScreen() }
             composable("settings") { SettingsScreen() }
             composable("ai") {
-                AiScreen(onBack = { navController.popBackStack() })
+                val vm = aiViewModel
+                androidx.compose.runtime.LaunchedEffect(Unit) { vm.setTimerViewModel(timerViewModel) }
+                AiScreen(onBack = { navController.popBackStack() }, viewModel = vm)
             }
             composable("search") {
                 SearchScreen(

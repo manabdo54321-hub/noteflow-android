@@ -9,6 +9,8 @@ import com.noteflow.app.features.tasks.data.local.TaskDao
 import com.noteflow.app.features.tasks.data.repository.TaskRepository
 import com.noteflow.app.features.timer.data.local.SessionDao
 import com.noteflow.app.features.timer.data.repository.SessionRepository
+import com.noteflow.app.features.ai.data.local.AiChatDao
+import com.noteflow.app.features.ai.data.AiActionExecutor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -60,4 +62,16 @@ object AppModule {
     @Singleton
     fun provideSessionRepository(sessionDao: SessionDao): SessionRepository =
         SessionRepository(sessionDao)
+
+    @Provides
+    @Singleton
+    fun provideAiChatDao(database: AppDatabase): AiChatDao =
+        database.aiChatDao()
+
+    @Provides
+    @Singleton
+    fun provideAiActionExecutor(
+        taskRepository: com.noteflow.app.features.tasks.data.repository.TaskRepository,
+        noteRepository: com.noteflow.app.features.notes.data.repository.NoteRepository
+    ): AiActionExecutor = AiActionExecutor(taskRepository, noteRepository)
 }
