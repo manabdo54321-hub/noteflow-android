@@ -146,7 +146,7 @@ fun NoteDetailScreen(
                 if (isEditMode) {
                     NoteDetailContentField(content) { content = it }
                 } else {
-                    ReadModeContent(content, notes, onNavigateToNote)
+                    ReadModeContent(content.text, notes, onNavigateToNote)
                 }
             }
             if (backlinks.isNotEmpty()) {
