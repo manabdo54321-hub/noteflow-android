@@ -14,10 +14,14 @@ val commitCount = try {
 
 android {
 
-    val localProps = java.util.Properties()
-    val localFile = rootProject.file("local.properties")
-    if (localFile.exists()) localProps.load(java.io.FileInputStream(localFile))
-    val groqKey = localProps.getProperty("groq_api_key", "")
+    val groqKey = rootProject.file("local.properties")
+        .takeIf { it.exists() }
+        ?.inputStream()
+        ?.use { stream ->
+            val p = java.util.Properties()
+            p.load(stream)
+            p.getProperty("groq_api_key", "")
+        } ?: ""
 
     namespace = "com.noteflow.app"
     compileSdk = 34
