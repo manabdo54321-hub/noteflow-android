@@ -362,7 +362,7 @@ private fun TimerCircleDisplay(minutes: Long, seconds: Long, progress: Float, is
                     topLeft = topLeft, size = arcSize, style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                val displayHours = if (isCountingUp) countUpSeconds / 3600 else (timeLeft / 1000) / 3600
+                val displayHours = minutes / 60
                 Box(modifier = Modifier.clickable { onTimePickerClick() }) {
                     if (displayHours > 0) Text("%02d:%02d:%02d".format(displayHours, minutes % 60, seconds), fontSize = 38.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     else Text("%02d:%02d".format(minutes, seconds), fontSize = 52.sp, fontWeight = FontWeight.Bold, color = Color.White)
