@@ -31,7 +31,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import com.noteflow.app.features.notes.data.local.NoteEntity
 import com.noteflow.app.features.tasks.data.local.TaskEntity
 import java.text.SimpleDateFormat
@@ -54,10 +54,10 @@ fun SearchScreen(
     onNoteClick: (Long) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
-    val query        by viewModel.query.collectAsStateWithLifecycle()
-    val activeFilter by viewModel.activeFilter.collectAsStateWithLifecycle()
-    val noteResults  by viewModel.noteResults.collectAsStateWithLifecycle()
-    val taskResults  by viewModel.taskResults.collectAsStateWithLifecycle()
+    val query        by viewModel.query.collectAsState()
+    val activeFilter by viewModel.activeFilter.collectAsState()
+    val noteResults  by viewModel.noteResults.collectAsState()
+    val taskResults  by viewModel.taskResults.collectAsState()
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
