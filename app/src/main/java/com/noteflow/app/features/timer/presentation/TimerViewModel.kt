@@ -110,6 +110,11 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun playAlarmAndVibrate() {
+        try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            audioManager.setStreamVolume(android.media.AudioManager.STREAM_ALARM,
+                audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM), 0)
+        } catch (e: Exception) { }
         viewModelScope.launch {
             try {
                 val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)

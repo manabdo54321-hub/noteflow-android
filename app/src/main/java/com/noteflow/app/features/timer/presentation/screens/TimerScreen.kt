@@ -184,7 +184,7 @@ fun TimerScreen(
                     modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             }
             Spacer(modifier = Modifier.height(20.dp))
-            TimerMainControls(isRunning, isWorkSession,
+            TimerMainControls(isRunning, isWorkSession, timeLeft, customDuration, countUpSeconds,
                 onStart = { timerViewModel.setTask(selectedTaskId); timerViewModel.start() },
                 onPause = { timerViewModel.pause() },
                 onStop = { showStopConfirm = true },
@@ -400,7 +400,7 @@ private fun TimerMotivationText(message: String, isWorkSession: Boolean) {
 }
 
 @Composable
-private fun TimerMainControls(isRunning: Boolean, isWorkSession: Boolean, onStart: () -> Unit, onPause: () -> Unit, onStop: () -> Unit, onSkip: () -> Unit) {
+private fun TimerMainControls(isRunning: Boolean, isWorkSession: Boolean, timeLeft: Long, customDuration: Long, countUpSeconds: Long, onStart: () -> Unit, onPause: () -> Unit, onStop: () -> Unit, onSkip: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(modifier = Modifier.size(220.dp, 56.dp).clip(RoundedCornerShape(50.dp))
             .background(if (isRunning) SurfaceColor else Color.White)
