@@ -66,6 +66,7 @@ fun HomeScreen(
     onNavigateToStats: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToSearch: () -> Unit,
+    onNavigateToAi: () -> Unit,
     noteViewModel: NoteViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel(),
     taskViewModel: TaskViewModel = hiltViewModel()
@@ -143,6 +144,7 @@ fun HomeScreen(
                             onShowAddSheet = { showAddSheet = true },
                             onNavigateToTasks = { tasksFullScreen = true },
                             onNavigateToSearch = onNavigateToSearch,
+                            onNavigateToAi = onNavigateToAi,
                             onNavigateToSettings = onNavigateToSettings
                         )
                     }
@@ -279,7 +281,7 @@ private fun HomeWritingMiniBar(tasks: List<Task>, timeLeft: Long, isRunning: Boo
 }
 
 @Composable
-private fun HomeBottomNav(onWrite: () -> Unit, onShowAddSheet: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToSearch: () -> Unit, onNavigateToSettings: () -> Unit) {
+private fun HomeBottomNav(onWrite: () -> Unit, onShowAddSheet: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToSearch: () -> Unit, onNavigateToAi: () -> Unit, onNavigateToSettings: () -> Unit) {
     var fabPressed by remember { mutableStateOf(false) }
     val fabScale by animateFloatAsState(targetValue = if (fabPressed) 0.85f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "fab")
     LaunchedEffect(fabPressed) { if (fabPressed) { kotlinx.coroutines.delay(150); fabPressed = false } }
@@ -296,6 +298,9 @@ private fun HomeBottomNav(onWrite: () -> Unit, onShowAddSheet: () -> Unit, onNav
                 .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
                 .clickable { fabPressed = true; onShowAddSheet() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF131313), modifier = Modifier.size(28.dp))
+            }
+            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToAi() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AccentColor.copy(alpha = 0.8f), modifier = Modifier.size(26.dp))
             }
             Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSearch() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Search, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))

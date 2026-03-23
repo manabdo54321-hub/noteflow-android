@@ -15,6 +15,7 @@ import com.noteflow.app.features.home.presentation.HomeScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteListScreen
 import com.noteflow.app.features.search.presentation.SearchScreen
+import com.noteflow.app.features.ai.presentation.AiScreen
 import com.noteflow.app.features.settings.presentation.screens.SettingsScreen
 import com.noteflow.app.features.stats.presentation.screens.StatsScreen
 import com.noteflow.app.features.tasks.presentation.screens.TaskListScreen
@@ -47,6 +48,7 @@ fun AppNavigation(
                     onNavigateToStats = { navController.navigate("stats") },
                     onNavigateToSettings = { navController.navigate("settings") },
                     onNavigateToSearch = { navController.navigate("search") },
+                    onNavigateToAi = { navController.navigate("ai") },
                     timerViewModel = timerViewModel
                 )
             }
@@ -78,6 +80,9 @@ fun AppNavigation(
             }
             composable("stats") { StatsScreen() }
             composable("settings") { SettingsScreen() }
+            composable("ai") {
+                AiScreen(onBack = { navController.popBackStack() })
+            }
             composable("search") {
                 SearchScreen(
                     onBack = { navController.popBackStack() },
