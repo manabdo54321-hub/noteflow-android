@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.noteflow.app.features.tasks.presentation.TaskViewModel
 import com.noteflow.app.features.timer.presentation.TimerViewModel
@@ -113,6 +114,11 @@ fun TimerScreen(
     val minutes = if (isCountingUp) countUpSeconds / 60 else (timeLeft / 1000) / 60
     val seconds = if (isCountingUp) countUpSeconds % 60 else (timeLeft / 1000) % 60
     val motivationalMsg = remember(completedSessions) { motivationalMessages[completedSessions % motivationalMessages.size] }
+    var showExitConfirm by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = strictNoExit && isRunning) {
+        showExitConfirm = true
+    }
 
     // Accelerometer للـ flip detection
     DisposableEffect(strictFlipPhone, isRunning) {
@@ -202,6 +208,14 @@ fun TimerScreen(
                 dismissButton = { TextButton(onClick = { timerViewModel.pause(); showFlipWarning = false }) { Text("إيقاف", color = Color(0xFFFF6B6B)) } }
             )
         }
+        if (showExitConfirm) {
+            AlertDialog(onDismissRequest = { showExitConfirm = false }, containerColor = SurfaceColor,
+                title = { Text("⚠️ الوضع الصارم", color = Color.White, fontWeight = FontWeight.Bold) },
+                text = { Text("أنت في وضع التركيز! هل تريد الخروج فعلاً؟", color = OnSurfaceVariant) },
+                confirmButton = { TextButton(onClick = { showExitConfirm = false; onBack() }) { Text("خروج", color = Color(0xFFFF6B6B)) } },
+                dismissButton = { TextButton(onClick = { showExitConfirm = false }) { Text("استمر في التركيز 💪", color = PrimaryColor) } }
+            )
+        }
 
         if (showTaskPicker) TimerTaskPickerDialog(tasks.filter { !it.isCompleted }, selectedTaskId, { selectedTaskId = it; showTaskPicker = false }, { showTaskPicker = false })
         if (showStopConfirm) TimerConfirmDialog("إيقاف الجلسة؟", "هل أنت متأكد؟ سيتم إلغاء التقدم", "إيقاف", "تابع التركيز", { timerViewModel.reset(); countUpSeconds = 0; showStopConfirm = false }, { showStopConfirm = false })
@@ -218,77 +232,6 @@ fun TimerScreen(
 }
 
 @Composable
-private fun StrictModeSheet(
-    flipPhone: Boolean, dnd: Boolean, noExit: Boolean,
-    onFlipChange: (Boolean) -> Unit, onDndChange: (Boolean) -> Unit, onNoExitChange: (Boolean) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    val dndGranted = remember {
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.isNotificationPolicyAccessGranted
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = SurfaceColor,
-        title = { Text("الوضع الصارم", color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                StrictModeItem(
-                    icon = Icons.Default.ScreenLockRotation,
-                    title = "اقلب الهاتف",
-                    subtitle = "ضع الشاشة لأسفل للتركيز",
-                    isAvailable = true,
-                    isEnabled = flipPhone,
-                    onToggle = { onFlipChange(it) }
-                )
-                StrictModeItem(
-                    icon = Icons.Default.NotificationsOff,
-                    title = "حظر الإشعارات",
-                    subtitle = if (dndGranted) "وضع عدم الإزعاج" else "⚠️ الأذونات (0/1)",
-                    isAvailable = dndGranted,
-                    isEnabled = dnd,
-                    onToggle = { onDndChange(it) }
-                )
-                StrictModeItem(
-                    icon = Icons.Default.Block,
-                    title = "منع الخروج",
-                    subtitle = "تحذير عند محاولة الخروج",
-                    isAvailable = true,
-                    isEnabled = noExit,
-                    onToggle = { onNoExitChange(it) }
-                )
-                StrictModeItem(
-                    icon = Icons.Default.PhoneLocked,
-                    title = "قفل الهاتف",
-                    subtitle = "⚠️ غير متاح — يحتاج صلاحيات خاصة",
-                    isAvailable = false,
-                    isEnabled = false,
-                    onToggle = {}
-                )
-                StrictModeItem(
-                    icon = Icons.Default.AppBlocking,
-                    title = "حظر التطبيقات",
-                    subtitle = "⚠️ غير متاح — يحتاج صلاحيات خاصة",
-                    isAvailable = false,
-                    isEnabled = false,
-                    onToggle = {}
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("تأكيد", color = PrimaryColor, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                onFlipChange(false); onDndChange(false); onNoExitChange(false); onDismiss()
-            }) { Text("إلغاء", color = OnSurfaceVariant) }
-        }
-    )
-}
 
 @Composable
 private fun StrictModeItem(icon: ImageVector, title: String, subtitle: String, isAvailable: Boolean, isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
@@ -587,4 +530,96 @@ private fun TimerModeOption(icon: ImageVector, title: String, subtitle: String, 
         }
         if (isSelected) Icon(Icons.Default.Check, contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(20.dp))
     }
+}
+
+private fun StrictModeSheet(
+    flipPhone: Boolean, dnd: Boolean, noExit: Boolean,
+    onFlipChange: (Boolean) -> Unit, onDndChange: (Boolean) -> Unit, onNoExitChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val dndGranted = remember {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.isNotificationPolicyAccessGranted
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceColor,
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text("🧘 الوضع الصارم", color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text("اختار ما يناسبك لتعزيز تركيزك", fontSize = 11.sp, color = OnSurfaceVariant, textAlign = TextAlign.Center)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                StrictModeItem(
+                    icon = Icons.Default.ScreenLockRotation,
+                    title = "اقلب الهاتف 📱",
+                    subtitle = if (flipPhone) "✅ فعّال — ضع الشاشة لأسفل للتركيز" else "ضع الشاشة لأسفل للتركيز",
+                    isAvailable = true, isEnabled = flipPhone,
+                    onToggle = { onFlipChange(it) }
+                )
+                if (!dndGranted) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFFF6B6B).copy(alpha = 0.1f))
+                            .clickable {
+                                val intent = android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                                context.startActivity(intent)
+                            }.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.NotificationsOff, contentDescription = null,
+                            tint = Color(0xFFFF6B6B), modifier = Modifier.size(22.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("حظر الإشعارات", fontSize = 14.sp, color = OnSurface)
+                            Text("اضغط لمنح الإذن من الإعدادات", fontSize = 11.sp, color = Color(0xFFFF6B6B))
+                        }
+                        Icon(Icons.Default.OpenInNew, contentDescription = null,
+                            tint = Color(0xFFFF6B6B), modifier = Modifier.size(16.dp))
+                    }
+                } else {
+                    StrictModeItem(
+                        icon = Icons.Default.NotificationsOff,
+                        title = "حظر الإشعارات 🔕",
+                        subtitle = if (dnd) "✅ فعّال — وضع عدم الإزعاج" else "وضع عدم الإزعاج أثناء التركيز",
+                        isAvailable = true, isEnabled = dnd,
+                        onToggle = { onDndChange(it) }
+                    )
+                }
+                StrictModeItem(
+                    icon = Icons.Default.Block,
+                    title = "منع الخروج 🚫",
+                    subtitle = if (noExit) "✅ فعّال — تحذير عند محاولة الخروج" else "تحذير عند محاولة الخروج",
+                    isAvailable = true, isEnabled = noExit,
+                    onToggle = { onNoExitChange(it) }
+                )
+                StrictModeItem(
+                    icon = Icons.Default.PhoneLocked,
+                    title = "قفل الهاتف",
+                    subtitle = "غير متاح حالياً",
+                    isAvailable = false, isEnabled = false, onToggle = {}
+                )
+                StrictModeItem(
+                    icon = Icons.Default.AppBlocking,
+                    title = "حظر التطبيقات",
+                    subtitle = "غير متاح حالياً",
+                    isAvailable = false, isEnabled = false, onToggle = {}
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("تأكيد", color = PrimaryColor, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = {
+                onFlipChange(false); onDndChange(false); onNoExitChange(false); onDismiss()
+            }) { Text("إلغاء الكل", color = Color(0xFFFF6B6B)) }
+        }
+    )
 }
