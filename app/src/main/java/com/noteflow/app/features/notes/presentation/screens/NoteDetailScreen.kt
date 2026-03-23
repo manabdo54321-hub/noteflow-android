@@ -26,6 +26,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -102,13 +107,13 @@ fun NoteDetailScreen(
     val backlinks by viewModel.backlinks.collectAsState()
     val existing = remember(noteId, notes) { notes.find { it.id == noteId } }
     var title by remember(existing) { mutableStateOf(existing?.title ?: "") }
-    var content by remember(existing) { mutableStateOf(existing?.content ?: "") }
+    var content by remember(existing) { mutableStateOf(TextFieldValue(existing?.content ?: "")) }
     var isEditMode by remember { mutableStateOf(noteId == 0L) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     val error by viewModel.error.collectAsState()
 
     LaunchedEffect(title, content) {
-        if (title.isNotBlank()) viewModel.triggerAutoSave(title, content, noteId)
+        if (title.isNotBlank()) viewModel.triggerAutoSave(title, content.text, noteId)
     }
     LaunchedEffect(error) { if (error != null) viewModel.clearError() }
     LaunchedEffect(noteId, title) {
@@ -116,16 +121,16 @@ fun NoteDetailScreen(
     }
 
     val tags = remember(content) {
-        Regex("#(\\w+)").findAll(content).map { it.groupValues[1] }.toList()
+        Regex("#(\\w+)").findAll(content.text).map { it.groupValues[1] }.toList()
     }
 
     Column(modifier = Modifier.fillMaxSize().background(BgColor)) {
         NoteDetailTopBar(
             noteId = noteId,
             isEditMode = isEditMode,
-            onBack = { if (title.isNotBlank()) viewModel.saveNote(title, content, noteId); onBack() },
+            onBack = { if (title.isNotBlank()) viewModel.saveNote(title, content.text, noteId); onBack() },
             onToggleEdit = {
-                if (isEditMode && title.isNotBlank()) viewModel.saveNote(title, content, noteId)
+                if (isEditMode && title.isNotBlank()) viewModel.saveNote(title, content.text, noteId)
                 isEditMode = !isEditMode
             },
             onShowDelete = { showDeleteDialog = true }
@@ -156,13 +161,7 @@ fun NoteDetailScreen(
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
 
-        NoteDetailBottomToolbar(isEditMode) { label ->
-            when (label) {
-                "عريض" -> content += "****"
-                "قائمة" -> content += "\n- "
-                "تاج" -> content += " #"
-                "رابط" -> content += " [[]]"
-            }
+        NoteDetailObsidianToolbar(isEditMode, content) { content = it }
         }
     }
 
@@ -238,7 +237,7 @@ private fun NoteDetailTags(tags: List<String>) {
 }
 
 @Composable
-private fun NoteDetailContentField(content: String, onContentChange: (String) -> Unit) {
+private fun NoteDetailContentField(content: TextFieldValue, onContentChange: (TextFieldValue) -> Unit) {
     BasicTextField(
         value = content, onValueChange = onContentChange,
         textStyle = TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 26.sp),
@@ -246,7 +245,7 @@ private fun NoteDetailContentField(content: String, onContentChange: (String) ->
         visualTransformation = MarkdownVisualTransformation(primaryColor = PrimaryColor, onSurface = Color.White),
         modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp),
         decorationBox = { inner ->
-            if (content.isEmpty()) Text("واصل أفكارك...", color = OnSurfaceVariant.copy(alpha = 0.4f), fontSize = 16.sp)
+            if (content.text.isEmpty()) Text("واصل أفكارك...", color = OnSurfaceVariant.copy(alpha = 0.4f), fontSize = 16.sp)
             inner()
         }
     )
@@ -372,6 +371,51 @@ private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote
                 }
                 line.isBlank() -> Spacer(modifier = Modifier.height(8.dp))
                 else -> Text(line, color = Color.White, fontSize = 16.sp, lineHeight = 26.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoteDetailObsidianToolbar(
+    isEditMode: Boolean,
+    content: TextFieldValue,
+    onContentChange: (TextFieldValue) -> Unit
+) {
+    if (!isEditMode) return
+    val tools = listOf("H1", "H2", "H3", "B", "I", "•", "❝", "[[", "<>", "—", "☐", "@")
+    val inserts = mapOf(
+        "H1" to "# ", "H2" to "## ", "H3" to "### ",
+        "B" to "****", "I" to "__",
+        "•" to "\n- ", "❝" to "\n> ",
+        "[[" to "[[]]", "<>" to "`<>`",
+        "—" to "—", "☐" to "- [ ] ", "@" to "@"
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceColor)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        tools.forEach { tool ->
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(SurfaceHigh)
+                    .clickable {
+                        val insert = inserts[tool] ?: return@clickable
+                        val cursor = content.selection.end
+                        val newText = content.text.substring(0, cursor) + insert + content.text.substring(cursor)
+                        val newCursor = cursor + insert.length
+                        onContentChange(TextFieldValue(text = newText, selection = TextRange(newCursor)))
+                    }
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(tool, fontSize = 13.sp, color = PrimaryColor, fontWeight = FontWeight.Bold)
             }
         }
     }
