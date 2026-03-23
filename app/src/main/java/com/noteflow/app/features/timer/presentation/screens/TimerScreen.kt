@@ -345,7 +345,7 @@ private fun TimerTaskSelector(selectedTaskName: String?, isRunning: Boolean, onS
 private fun TimerCircleDisplay(minutes: Long, seconds: Long, progress: Float, isWorkSession: Boolean,
     completedSessions: Int, isRunning: Boolean, isCountingUp: Boolean, onTimePickerClick: () -> Unit) {
     val breatheScale by rememberInfiniteTransition(label = "breathe").animateFloat(
-        initialValue = 1f, targetValue = if (!isWorkSession && isRunning) 1.03f else 1f,
+        initialValue = 1f, targetValue = if (isRunning) (if (isWorkSession) 1.02f else 1.04f) else 1f,
         animationSpec = infiniteRepeatable(tween(3000, easing = EaseInOut), RepeatMode.Reverse), label = "scale"
     )
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp), contentAlignment = Alignment.Center) {
@@ -363,7 +363,10 @@ private fun TimerCircleDisplay(minutes: Long, seconds: Long, progress: Float, is
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box(modifier = Modifier.clickable { onTimePickerClick() }) {
-                    Text("%02d:%02d".format(minutes, seconds), fontSize = 52.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    val displayHours = if (isCountingUp) countUpSeconds / 3600 else (timeLeft / 1000) / 3600
+                Box(modifier = Modifier.clickable { onTimePickerClick() }) {
+                    if (displayHours > 0) Text("%02d:%02d:%02d".format(displayHours, minutes % 60, seconds), fontSize = 38.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    else Text("%02d:%02d".format(minutes, seconds), fontSize = 52.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
                 Text(if (isWorkSession) "جلسة تركيز" else if (completedSessions % 4 == 0 && completedSessions > 0) "استراحة كبيرة 🌿" else "استراحة قصيرة 🌿",
                     fontSize = 11.sp, letterSpacing = 2.sp, color = OnSurfaceVariant)
@@ -405,7 +408,7 @@ private fun TimerMainControls(isRunning: Boolean, isWorkSession: Boolean, onStar
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null,
                     tint = if (isRunning) OnSurface else Color(0xFF131313), modifier = Modifier.size(22.dp))
-                Text(if (isRunning) "إيقاف مؤقت" else if (isWorkSession) "ابدأ التركيز" else "ابدأ الاستراحة",
+                Text(if (isRunning) "إيقاف مؤقت" else if (timeLeft < customDuration || countUpSeconds > 0) "استئناف" else if (isWorkSession) "ابدأ التركيز" else "ابدأ الاستراحة",
                     fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (isRunning) OnSurface else Color(0xFF131313))
             }
         }
@@ -474,8 +477,8 @@ private fun TimeScrollPicker(value: Int, maxValue: Int, label: String, onValueCh
                 detectVerticalDragGestures(onDragEnd = { dragAccumulator = 0f },
                     onVerticalDrag = { _, dragAmount ->
                         dragAccumulator += dragAmount
-                        val steps = (dragAccumulator / 40).toInt()
-                        if (steps != 0) { val newVal = (value - steps).coerceIn(0, maxValue); onValueChange(newVal); dragAccumulator -= steps * 40f }
+                        val steps = (dragAccumulator / 25).toInt()
+                        if (steps != 0) { val newVal = (value - steps).coerceIn(0, maxValue); onValueChange(newVal); dragAccumulator -= steps * 25f }
                     })
             }, contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
