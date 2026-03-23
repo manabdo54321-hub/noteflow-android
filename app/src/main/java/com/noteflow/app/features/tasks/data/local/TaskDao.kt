@@ -14,6 +14,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE noteId = :noteId ORDER BY createdAt DESC")
     fun getTasksByNote(noteId: Long): Flow<List<TaskEntity>>
 
+    @Query("SELECT * FROM tasks WHERE title LIKE '%' || :query || '%' ORDER BY createdAt DESC")
+    fun searchTasks(query: String): Flow<List<TaskEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTask(task: TaskEntity): Long
 

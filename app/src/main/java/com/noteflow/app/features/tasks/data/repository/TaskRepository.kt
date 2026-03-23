@@ -20,6 +20,9 @@ class TaskRepository @Inject constructor(private val taskDao: TaskDao) {
     fun getTasksByNote(noteId: Long): Flow<List<Task>> =
         taskDao.getTasksByNote(noteId).map { list -> list.map { it.toDomain() } }
 
+    fun searchTasks(query: String): Flow<List<Task>> =
+        taskDao.searchTasks(query).map { list -> list.map { it.toDomain() } }
+
     suspend fun saveTask(task: Task): Long =
         taskDao.insertTask(TaskEntity.fromDomain(task))
 
