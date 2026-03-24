@@ -33,7 +33,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.navigationBarsPadding
 import com.noteflow.app.ui.components.ObsidianToolbar as SharedObsidianToolbar
 import androidx.compose.runtime.CompositionLocalProvider
@@ -148,7 +148,7 @@ fun HomeScreen(
 
                 Column(modifier = Modifier.align(Alignment.BottomCenter)) {
                     if (isWriting) {
-                        @OptIn(ExperimentalComposeUiApi::class)
+                        @OptIn(ExperimentalLayoutApi::class)
                         val imeVisible = WindowInsets.isImeVisible
                         AnimatedVisibility(
                             visible = imeVisible,
