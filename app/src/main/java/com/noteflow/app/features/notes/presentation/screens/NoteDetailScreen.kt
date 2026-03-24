@@ -46,6 +46,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -177,6 +178,7 @@ fun NoteDetailScreen(
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
 
+        @OptIn(ExperimentalComposeUiApi::class)
         val imeVisible = WindowInsets.isImeVisible
         AnimatedVisibility(
             visible = isEditMode && imeVisible,
@@ -355,7 +357,7 @@ private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote
                         modifier = Modifier.clickable {
                             val old = if (isDone) "- [x] $taskText" else "- [ ] $taskText"
                             val new = if (isDone) "- [ ] $taskText" else "- [x] $taskText"
-                            onContentChange(TextFieldValue(content.text.replace(old, new)))
+                            onContentChange(TextFieldValue(content.replace(old, new)))
                         }
                     ) {
                         Box(
