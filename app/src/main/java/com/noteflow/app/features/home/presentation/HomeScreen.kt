@@ -27,6 +27,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
@@ -102,6 +105,7 @@ fun HomeScreen(
         }
     }
 
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Box(modifier = Modifier.fillMaxSize().background(BgColor).imePadding()) {
         when {
             timerFullScreen -> TimerFullScreen(timeLeft, isRunning, isWorkSession,
@@ -165,6 +169,7 @@ fun HomeScreen(
         if (showLeftDrawer) HomeLeftDrawer({ showLeftDrawer = false }, onNavigateToNotes, onNavigateToTasks, onNavigateToTimer, onNavigateToStats)
         if (showRightDrawer) HomeRightDrawer({ showRightDrawer = false }, onNavigateToSettings)
     }
+    } // end CompositionLocalProvider
 }
 
 @Composable

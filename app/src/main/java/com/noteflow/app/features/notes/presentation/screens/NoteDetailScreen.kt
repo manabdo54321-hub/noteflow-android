@@ -20,6 +20,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -124,6 +130,7 @@ fun NoteDetailScreen(
         Regex("#(\\w+)").findAll(content.text).map { it.groupValues[1] }.toList()
     }
 
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Column(modifier = Modifier.fillMaxSize().background(BgColor)) {
         NoteDetailTopBar(
             noteId = noteId,
@@ -171,6 +178,7 @@ fun NoteDetailScreen(
             onDismiss = { showDeleteDialog = false }
         )
     }
+    } // end CompositionLocalProvider
 }
 
 @Composable
@@ -210,7 +218,7 @@ private fun NoteDetailTitle(title: String, isEditMode: Boolean, onTitleChange: (
     if (isEditMode) {
         BasicTextField(
             value = title, onValueChange = onTitleChange,
-            textStyle = TextStyle(color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, lineHeight = 40.sp),
+            textStyle = TextStyle(color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, lineHeight = 40.sp, textAlign = TextAlign.Right),
             cursorBrush = SolidColor(PrimaryColor),
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             decorationBox = { inner ->
@@ -239,7 +247,7 @@ private fun NoteDetailTags(tags: List<String>) {
 private fun NoteDetailContentField(content: TextFieldValue, onContentChange: (TextFieldValue) -> Unit) {
     BasicTextField(
         value = content, onValueChange = onContentChange,
-        textStyle = TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 26.sp),
+        textStyle = TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 26.sp, textAlign = TextAlign.Right),
         cursorBrush = SolidColor(PrimaryColor),
         visualTransformation = MarkdownVisualTransformation(primaryColor = PrimaryColor, onSurface = Color.White),
         modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp),
@@ -354,7 +362,7 @@ private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote
                     }
                     androidx.compose.foundation.text.ClickableText(
                         text = annotated,
-                        style = TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 26.sp),
+                        style = TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 26.sp, textAlign = TextAlign.Right),
                         onClick = { offset -> annotated.getStringAnnotations("NOTE_LINK", offset, offset).firstOrNull()?.let { onNavigateToNote(it.item.toLong()) } }
                     )
                 }
