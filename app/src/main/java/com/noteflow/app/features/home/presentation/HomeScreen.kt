@@ -27,6 +27,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.navigationBarsPadding
 import com.noteflow.app.ui.components.ObsidianToolbar as SharedObsidianToolbar
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -140,7 +147,18 @@ fun HomeScreen(
 
                 Column(modifier = Modifier.align(Alignment.BottomCenter)) {
                     if (isWriting) {
-                        SharedObsidianToolbar(value = noteContent, onValueChange = { noteContent = it })
+                        val imeVisible = WindowInsets.isImeVisible
+                        AnimatedVisibility(
+                            visible = imeVisible,
+                            enter = slideInVertically(initialOffsetY = { it }),
+                            exit = slideOutVertically(targetOffsetY = { it })
+                        ) {
+                            SharedObsidianToolbar(
+                                value = noteContent,
+                                onValueChange = { noteContent = it },
+                                modifier = Modifier.navigationBarsPadding()
+                            )
+                        }
                         HomeWritingMiniBar(tasks, timeLeft, isRunning,
                             onStop = { isWriting = false; focusManager.clearFocus() })
                     } else {

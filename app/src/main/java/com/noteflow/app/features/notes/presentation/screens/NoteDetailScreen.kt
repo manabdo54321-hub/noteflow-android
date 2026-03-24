@@ -2,6 +2,7 @@ package com.noteflow.app.features.notes.presentation.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +39,13 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -154,7 +162,7 @@ fun NoteDetailScreen(
                 if (isEditMode) {
                     NoteDetailContentField(content) { content = it }
                 } else {
-                    ReadModeContent(content.text, notes, onNavigateToNote)
+                    ReadModeContent(content.text, notes, onNavigateToNote, onContentChange = { content = it })
                 }
             }
             if (backlinks.isNotEmpty()) {
@@ -169,7 +177,18 @@ fun NoteDetailScreen(
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
 
-        if (isEditMode) SharedObsidianToolbar(value = content, onValueChange = { content = it })
+        val imeVisible = WindowInsets.isImeVisible
+        AnimatedVisibility(
+            visible = isEditMode && imeVisible,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it })
+        ) {
+            SharedObsidianToolbar(
+                value = content,
+                onValueChange = { content = it },
+                modifier = Modifier.navigationBarsPadding()
+            )
+        }
     }
 
     if (showDeleteDialog) {
@@ -317,7 +336,7 @@ private fun NoteDetailDeleteDialog(title: String, onConfirm: () -> Unit, onDismi
 }
 
 @Composable
-private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote: (Long) -> Unit) {
+private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote: (Long) -> Unit, onContentChange: (TextFieldValue) -> Unit = {}) {
     if (content.isBlank()) {
         Text("لا يوجد محتوى", color = OnSurfaceVariant.copy(alpha = 0.5f), fontSize = 16.sp)
         return
@@ -327,6 +346,31 @@ private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote
             when {
                 line.startsWith("# ") -> Text(line.substring(2), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = PrimaryColor)
                 line.startsWith("## ") -> Text(line.substring(3), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = PrimaryColor)
+                line.startsWith("- [x] ") || line.startsWith("- [ ] ") -> {
+                    val isDone = line.startsWith("- [x] ")
+                    val taskText = line.removePrefix("- [x] ").removePrefix("- [ ] ")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.clickable {
+                            val old = if (isDone) "- [x] $taskText" else "- [ ] $taskText"
+                            val new = if (isDone) "- [ ] $taskText" else "- [x] $taskText"
+                            onContentChange(TextFieldValue(content.text.replace(old, new)))
+                        }
+                    ) {
+                        Box(
+                            modifier = Modifier.size(18.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                .background(if (isDone) PrimaryColor else Color.Transparent)
+                                .then(if (!isDone) Modifier.border(1.dp, PrimaryColor.copy(0.5f), androidx.compose.foundation.shape.RoundedCornerShape(4.dp)) else Modifier),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isDone) Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF131313), modifier = Modifier.size(12.dp))
+                        }
+                        Text(taskText, color = if (isDone) Color.White.copy(0.4f) else Color.White,
+                            fontSize = 16.sp, lineHeight = 24.sp,
+                            textDecoration = if (isDone) androidx.compose.ui.text.style.TextDecoration.LineThrough else null)
+                    }
+                }
                 line.startsWith("- ") || line.startsWith("• ") -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("•", color = PrimaryColor, fontSize = 16.sp)
