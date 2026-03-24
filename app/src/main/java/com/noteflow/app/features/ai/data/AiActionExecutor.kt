@@ -58,11 +58,11 @@ class AiActionExecutor @Inject constructor(
             }
             is AiAction.StartTimer -> {
                 timerViewModel?.setCustomDuration(0, action.minutes)
-                timerViewModel?.startTimer()
+                timerViewModel?.start()
                 "⏱️ بدأ التايمر ${action.minutes} دقيقة"
             }
             is AiAction.StopTimer -> {
-                timerViewModel?.pauseTimer()
+                timerViewModel?.pause()
                 "⏹️ تم إيقاف التايمر"
             }
             is AiAction.CreatePlan -> {
