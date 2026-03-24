@@ -155,6 +155,7 @@ fun NoteDetailScreen(
 
         LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
             item { NoteDetailTitle(title, isEditMode) { title = it } }
+            item { NoteDetailStatsBar(content.text, existing?.updatedAt ?: System.currentTimeMillis(), isEditMode) { isEditMode = !isEditMode } }
             if (tags.isNotEmpty()) {
                 item { NoteDetailTags(tags) }
             }
@@ -230,6 +231,44 @@ private fun NoteDetailTopBar(noteId: Long, isEditMode: Boolean, onBack: () -> Un
             }
             IconButton(onClick = onShowDelete) {
                 Icon(Icons.Default.MoreVert, contentDescription = null, tint = OnSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoteDetailStatsBar(content: String, updatedAt: Long, isEditMode: Boolean = true, onToggleMode: () -> Unit = {}) {
+    val wordCount = content.trim().split("\s+".toRegex()).filter { it.isNotBlank() }.size
+    val charCount = content.length
+    val timeAgo = remember(updatedAt) {
+        val diff = System.currentTimeMillis() - updatedAt
+        when {
+            diff < 60_000 -> "الآن"
+            diff < 3_600_000 -> "منذ ${diff / 60_000} دقيقة"
+            diff < 86_400_000 -> "منذ ${diff / 3_600_000} ساعة"
+            else -> "منذ ${diff / 86_400_000} يوم"
+        }
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("$wordCount كلمة | $charCount حرف", fontSize = 10.sp, color = Color(0xFF47464C))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("آخر تعديل: $timeAgo", fontSize = 10.sp, color = Color(0xFF47464C))
+            Box(
+                modifier = Modifier
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                    .background(if (isEditMode) Color(0xFF2A2A2A) else Color(0xFFCABEFF).copy(alpha = 0.2f))
+                    .clickable { onToggleMode() }
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    if (isEditMode) "👁 معاينة" else "✏️ تعديل",
+                    fontSize = 10.sp,
+                    color = if (isEditMode) Color(0xFFC8C5CD) else Color(0xFFCABEFF)
+                )
             }
         }
     }

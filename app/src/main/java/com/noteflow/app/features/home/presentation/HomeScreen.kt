@@ -107,10 +107,22 @@ fun HomeScreen(
     val cardsAlpha by animateFloatAsState(targetValue = if (isWriting) 0f else 1f, animationSpec = tween(350), label = "cards")
     val writeAlpha by animateFloatAsState(targetValue = if (timerFullScreen || tasksFullScreen) 0f else 1f, animationSpec = tween(350), label = "write")
 
+    var currentNoteId by remember { mutableStateOf(0L) }
+    var showSavedBanner by remember { mutableStateOf(false) }
     LaunchedEffect(noteTitle, noteContent.text) {
         if (noteTitle.isNotBlank()) {
-            kotlinx.coroutines.delay(2000)
-            noteViewModel.triggerAutoSave(noteTitle, noteContent.text, 0)
+            kotlinx.coroutines.delay(1500)
+            noteViewModel.triggerAutoSave(noteTitle, noteContent.text, currentNoteId)
+            showSavedBanner = true
+            kotlinx.coroutines.delay(3000)
+            showSavedBanner = false
+        }
+    }
+    LaunchedEffect(noteTitle) {
+        if (noteTitle.isNotBlank() && currentNoteId == 0L) {
+            kotlinx.coroutines.delay(1600)
+            val saved = noteViewModel.notes.value.find { it.title == noteTitle }
+            if (saved != null) currentNoteId = saved.id
         }
     }
 
@@ -122,8 +134,13 @@ fun HomeScreen(
                 onClose = { timerFullScreen = false })
             tasksFullScreen -> TasksFullScreen(tasks, onToggle = { taskViewModel.toggleComplete(it) }, onClose = { tasksFullScreen = false })
             else -> {
-                Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    HomeTopBar(greeting, { showRightDrawer = true }, { showLeftDrawer = true }, onNavigateToStats)
+                val scrollState = rememberScrollState()
+                val coroutineScope = rememberCoroutineScope()
+                LaunchedEffect(noteContent.text.length) {
+                    coroutineScope.launch { scrollState.animateScrollTo(scrollState.maxValue) }
+                }
+                Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+                    HomeTopBar(greeting, { showLeftDrawer = true }, { showRightDrawer = true }, onNavigateToStats)
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Box(modifier = Modifier.graphicsLayer(alpha = writeAlpha)) {
                             HomeQuickWrite(
@@ -160,6 +177,31 @@ fun HomeScreen(
                                 onValueChange = { noteContent = it },
                                 modifier = Modifier.navigationBarsPadding()
                             )
+                        }
+                        AnimatedVisibility(visible = showSavedBanner) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 4.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(AccentColor.copy(alpha = 0.15f))
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("✅ تم الحفظ", fontSize = 12.sp, color = PrimaryColor)
+                                if (currentNoteId != 0L) {
+                                    Text("افتح ←", fontSize = 12.sp, color = AccentColor,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.clickable {
+                                            isWriting = false
+                                            focusManager.clearFocus()
+                                            onNoteClick(currentNoteId)
+                                            noteTitle = ""
+                                            noteContent = TextFieldValue("")
+                                            currentNoteId = 0L
+                                        })
+                                }
+                            }
                         }
                         HomeWritingMiniBar(tasks, timeLeft, isRunning,
                             onStop = { isWriting = false; focusManager.clearFocus() })
@@ -331,9 +373,6 @@ private fun HomeBottomNav(onWrite: () -> Unit, onShowAddSheet: () -> Unit, onNav
             Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSearch() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Search, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
             }
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSettings() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Settings, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
-            }
         }
     }
 }
@@ -355,14 +394,19 @@ private fun HomeQuickWrite(noteTitle: String, noteContent: TextFieldValue, onTit
         BasicTextField(value = noteContent, onValueChange = onContentChange,
             textStyle = TextStyle(color = OnSurfaceVariant, fontSize = 15.sp, lineHeight = 26.sp, textAlign = TextAlign.Right),
             cursorBrush = SolidColor(PrimaryColor),
-            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 120.dp).onFocusChanged { onFocusChange(it.isFocused) },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).onFocusChanged { onFocusChange(it.isFocused) },
             decorationBox = { inner ->
                 if (noteContent.text.isEmpty()) Text("اكتب أفكارك هنا...", color = OnSurfaceVariant.copy(alpha = 0.25f), fontSize = 15.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right)
                 inner()
             })
         if (noteTitle.isNotBlank() || noteContent.text.isNotBlank()) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text("يحفظ تلقائياً...", fontSize = 10.sp, letterSpacing = 1.sp, color = OutlineVariant, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Left)
+            val wordCount = noteContent.text.trim().split("\s+".toRegex()).filter { it.isNotBlank() }.size
+            val charCount = noteContent.text.length
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("يحفظ تلقائياً...", fontSize = 10.sp, letterSpacing = 1.sp, color = OutlineVariant)
+                Text("$wordCount كلمة | $charCount حرف", fontSize = 10.sp, color = OutlineVariant)
+            }
         }
     }
 }
