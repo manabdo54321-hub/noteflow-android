@@ -238,7 +238,7 @@ private fun NoteDetailTopBar(noteId: Long, isEditMode: Boolean, onBack: () -> Un
 
 @Composable
 private fun NoteDetailStatsBar(content: String, updatedAt: Long, isEditMode: Boolean = true, onToggleMode: () -> Unit = {}) {
-    val wordCount = content.trim().split("\s+".toRegex()).filter { it.isNotBlank() }.size
+    val wordCount = content.trim().split(" +".toRegex()).filter { it.isNotBlank() }.size
     val charCount = content.length
     val timeAgo = remember(updatedAt) {
         val diff = System.currentTimeMillis() - updatedAt

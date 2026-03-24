@@ -137,7 +137,7 @@ fun HomeScreen(
                 val scrollState = rememberScrollState()
                 val coroutineScope = rememberCoroutineScope()
                 LaunchedEffect(noteContent.text.length) {
-                    coroutineScope.launch { scrollState.animateScrollTo(scrollState.maxValue) }
+                    scrollState.animateScrollTo(scrollState.maxValue)
                 }
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
                     HomeTopBar(greeting, { showLeftDrawer = true }, { showRightDrawer = true }, onNavigateToStats)
@@ -401,7 +401,7 @@ private fun HomeQuickWrite(noteTitle: String, noteContent: TextFieldValue, onTit
             })
         if (noteTitle.isNotBlank() || noteContent.text.isNotBlank()) {
             Spacer(modifier = Modifier.height(8.dp))
-            val wordCount = noteContent.text.trim().split("\s+".toRegex()).filter { it.isNotBlank() }.size
+            val wordCount = noteContent.text.trim().split(" +".toRegex()).filter { it.isNotBlank() }.size
             val charCount = noteContent.text.length
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("يحفظ تلقائياً...", fontSize = 10.sp, letterSpacing = 1.sp, color = OutlineVariant)
