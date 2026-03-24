@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import com.noteflow.app.ui.components.ObsidianToolbar as SharedObsidianToolbar
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -168,7 +169,7 @@ fun NoteDetailScreen(
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
 
-        NoteDetailObsidianToolbar(isEditMode, content) { content = it }
+        if (isEditMode) SharedObsidianToolbar(value = content, onValueChange = { content = it })
     }
 
     if (showDeleteDialog) {

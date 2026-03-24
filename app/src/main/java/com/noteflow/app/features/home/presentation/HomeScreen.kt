@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import com.noteflow.app.ui.components.ObsidianToolbar as SharedObsidianToolbar
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -139,7 +140,7 @@ fun HomeScreen(
 
                 Column(modifier = Modifier.align(Alignment.BottomCenter)) {
                     if (isWriting) {
-                        ObsidianToolbar(noteContent = noteContent, onContentChange = { noteContent = it })
+                        SharedObsidianToolbar(value = noteContent, onValueChange = { noteContent = it })
                         HomeWritingMiniBar(tasks, timeLeft, isRunning,
                             onStop = { isWriting = false; focusManager.clearFocus() })
                     } else {
