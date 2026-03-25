@@ -2,6 +2,9 @@ package com.noteflow.app.features.timer.presentation
 
 import android.content.Context
 import android.media.RingtoneManager
+import com.noteflow.app.core.sound.SoundManager
+import com.noteflow.app.core.sound.TimerBellType
+import com.noteflow.app.core.sound.WhiteNoiseType
 import android.os.CountDownTimer
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -20,6 +23,7 @@ import javax.inject.Inject
 @HiltViewModel
 class TimerViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
+    private val soundManager: SoundManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -52,6 +56,14 @@ class TimerViewModel @Inject constructor(
     private var currentTaskId: Long? = null
 
     fun setTask(taskId: Long?) { currentTaskId = taskId }
+
+    private val _bellType = MutableStateFlow(TimerBellType.DEFAULT)
+    val bellType: StateFlow<TimerBellType> = _bellType
+    private val _whiteNoiseType = MutableStateFlow(WhiteNoiseType.NONE)
+    val whiteNoiseType: StateFlow<WhiteNoiseType> = _whiteNoiseType
+    fun setBellType(type: TimerBellType) { _bellType.value = type }
+    fun setWhiteNoise(type: WhiteNoiseType) { _whiteNoiseType.value = type; soundManager.playWhiteNoise(type) }
+    fun stopWhiteNoise() { soundManager.stopWhiteNoise() }
 
     fun setCustomDuration(hours: Int, minutes: Int) {
         val duration = (hours * 3600L + minutes * 60L) * 1000L
@@ -110,29 +122,14 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun playAlarmAndVibrate() {
-        try {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-            audioManager.setStreamVolume(android.media.AudioManager.STREAM_ALARM,
-                audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM), 0)
-        } catch (e: Exception) { }
         viewModelScope.launch {
-            try {
-                val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                val ringtone = RingtoneManager.getRingtone(context, ringtoneUri)
-                ringtone?.play()
-                delay(3000)
-                ringtone?.stop()
-            } catch (e: Exception) { }
-
+            try { soundManager.playTimerBell(_bellType.value) } catch (e: Exception) { }
             try {
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                val pattern = longArrayOf(0, 500, 200, 500, 200, 500)
-                vibrator?.vibrate(VibrationEffect.createWaveform(pattern, -1))
+                vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 500, 200, 500), -1))
             } catch (e: Exception) { }
         }
     }
-
     private fun onSessionFinished() {
         viewModelScope.launch {
             sessionRepository.saveSession(

@@ -42,6 +42,8 @@ import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.noteflow.app.features.tasks.presentation.TaskViewModel
 import com.noteflow.app.features.timer.presentation.TimerViewModel
+import com.noteflow.app.core.sound.WhiteNoiseType
+import com.noteflow.app.core.sound.TimerBellType
 
 private val BgColor = Color(0xFF0D0D0D)
 private val SurfaceColor = Color(0xFF1C1B1B)
@@ -90,7 +92,7 @@ fun TimerScreen(
     var showTimerModeSheet by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showStrictModeSheet by remember { mutableStateOf(false) }
-    var selectedNoise by remember { mutableStateOf<String?>(null) }
+    val selectedNoise by timerViewModel.whiteNoiseType.collectAsState()
     var isCountingUp by remember { mutableStateOf(false) }
     var countUpSeconds by remember { mutableStateOf(0L) }
     var selectedHours by remember { mutableStateOf(0) }
@@ -220,7 +222,7 @@ fun TimerScreen(
         if (showTaskPicker) TimerTaskPickerDialog(tasks.filter { !it.isCompleted }, selectedTaskId, { selectedTaskId = it; showTaskPicker = false }, { showTaskPicker = false })
         if (showStopConfirm) TimerConfirmDialog("إيقاف الجلسة؟", "هل أنت متأكد؟ سيتم إلغاء التقدم", "إيقاف", "تابع التركيز", { timerViewModel.reset(); countUpSeconds = 0; showStopConfirm = false }, { showStopConfirm = false })
         if (showSkipConfirm) TimerConfirmDialog("تخطي الجلسة؟", "هل أنت متأكد من التخطي؟", "تخطي", "إلغاء", { timerViewModel.skipSession(); countUpSeconds = 0; showSkipConfirm = false }, { showSkipConfirm = false })
-        if (showNoiseSheet) TimerNoiseBottomSheet(selectedNoise, { selectedNoise = it; showNoiseSheet = false }, { showNoiseSheet = false })
+        if (showNoiseSheet) TimerNoiseBottomSheet(selectedNoise, { timerViewModel.setWhiteNoise(it); showNoiseSheet = false }, { showNoiseSheet = false })
         if (showTimerModeSheet) TimerModeBottomSheet(isCountingUp, { isCountingUp = it; countUpSeconds = 0; showTimerModeSheet = false }, { showTimerModeSheet = false })
         if (showTimePicker) TimerTimePickerDialog(selectedHours, selectedMinutes, { h, m -> selectedHours = h; selectedMinutes = m; timerViewModel.setCustomDuration(h, m); showTimePicker = false }, { showTimePicker = false })
         if (showStrictModeSheet) StrictModeSheet(
@@ -367,11 +369,11 @@ private fun TimerMainControls(isRunning: Boolean, isWorkSession: Boolean, timeLe
 }
 
 @Composable
-private fun TimerBottomToolbar(selectedNoise: String?, isCountingUp: Boolean, isStrictActive: Boolean,
+private fun TimerBottomToolbar(selectedNoise: WhiteNoiseType, isCountingUp: Boolean, isStrictActive: Boolean,
     onNoiseClick: () -> Unit, onModeClick: () -> Unit, onStrictClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().background(SurfaceColor).padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-        TimerToolBtn(Icons.Default.MusicNote, selectedNoise ?: "ضوضاء بيضاء", selectedNoise != null, onNoiseClick)
+        TimerToolBtn(Icons.Default.MusicNote, selectedNoise.label, selectedNoise != WhiteNoiseType.NONE, onNoiseClick)
         TimerToolBtn(Icons.Default.Timer, if (isCountingUp) "تصاعدي" else "تنازلي", isCountingUp, onModeClick)
         TimerToolBtn(Icons.Default.SelfImprovement, "الوضع الصارم", isStrictActive, onStrictClick)
     }
@@ -470,28 +472,28 @@ private fun TimerConfirmDialog(title: String, message: String, confirmText: Stri
 }
 
 @Composable
-private fun TimerNoiseBottomSheet(selectedNoise: String?, onSelect: (String?) -> Unit, onDismiss: () -> Unit) {
+private fun TimerNoiseBottomSheet(selectedNoise: WhiteNoiseType, onSelect: (WhiteNoiseType) -> Unit, onDismiss: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { onDismiss() })
     Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
         .background(SurfaceColor).padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(modifier = Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(OutlineVariant).align(Alignment.CenterHorizontally))
         Spacer(modifier = Modifier.height(4.dp))
         Text("اختار صوت هادئ", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        if (selectedNoise != null) {
+        // stop button handled by NONE type
             Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFFF6B6B).copy(alpha = 0.1f)).clickable { onSelect(null) }.padding(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("🔕", fontSize = 20.sp); Text("إيقاف الصوت", color = Color(0xFFFF6B6B), fontSize = 14.sp)
             }
         }
-        whiteNoiseSounds.forEach { (emoji, name) ->
+        WhiteNoiseType.entries.forEach { type ->
             Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                .background(if (selectedNoise == name) PrimaryColor.copy(alpha = 0.15f) else SurfaceHigh)
-                .border(if (selectedNoise == name) 1.dp else 0.dp, PrimaryColor.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                .clickable { onSelect(name) }.padding(14.dp),
+                .background(if (selectedNoise == type) PrimaryColor.copy(alpha = 0.15f) else SurfaceHigh)
+                .border(if (selectedNoise == type) 1.dp else 0.dp, PrimaryColor.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                .clickable { onSelect(type) }.padding(14.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(emoji, fontSize = 22.sp)
-                Text(name, color = if (selectedNoise == name) PrimaryColor else OnSurface, fontSize = 14.sp,
-                    fontWeight = if (selectedNoise == name) FontWeight.Bold else FontWeight.Normal)
+                Text(type.emoji, fontSize = 22.sp)
+                Text(type.label, color = if (selectedNoise == type) PrimaryColor else OnSurface, fontSize = 14.sp,
+                    fontWeight = if (selectedNoise == type) FontWeight.Bold else FontWeight.Normal)
                 if (selectedNoise == name) { Spacer(modifier = Modifier.weight(1f)); Icon(Icons.Default.VolumeUp, contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(16.dp)) }
             }
         }

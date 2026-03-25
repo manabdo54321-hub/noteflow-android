@@ -11,6 +11,7 @@ import com.noteflow.app.features.timer.data.local.SessionDao
 import com.noteflow.app.features.timer.data.repository.SessionRepository
 import com.noteflow.app.features.ai.data.local.AiChatDao
 import com.noteflow.app.features.ai.data.AiActionExecutor
+import com.noteflow.app.core.sound.SoundManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -67,6 +68,13 @@ object AppModule {
     @Singleton
     fun provideAiChatDao(database: AppDatabase): AiChatDao =
         database.aiChatDao()
+
+    @Provides
+    @Singleton
+    fun provideSoundManager(
+        @ApplicationContext context: android.content.Context
+    ): SoundManager = SoundManager(context)
+
 
     @Provides
     @Singleton
