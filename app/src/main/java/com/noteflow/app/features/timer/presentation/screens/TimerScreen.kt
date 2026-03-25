@@ -480,11 +480,6 @@ private fun TimerNoiseBottomSheet(selectedNoise: WhiteNoiseType, onSelect: (Whit
         Spacer(modifier = Modifier.height(4.dp))
         Text("اختار صوت هادئ", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
         // stop button handled by NONE type
-            Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFFF6B6B).copy(alpha = 0.1f)).clickable { onSelect(null) }.padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("🔕", fontSize = 20.sp); Text("إيقاف الصوت", color = Color(0xFFFF6B6B), fontSize = 14.sp)
-            }
-        }
         WhiteNoiseType.entries.forEach { type ->
             Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
                 .background(if (selectedNoise == type) PrimaryColor.copy(alpha = 0.15f) else SurfaceHigh)
@@ -494,7 +489,7 @@ private fun TimerNoiseBottomSheet(selectedNoise: WhiteNoiseType, onSelect: (Whit
                 Text(type.emoji, fontSize = 22.sp)
                 Text(type.label, color = if (selectedNoise == type) PrimaryColor else OnSurface, fontSize = 14.sp,
                     fontWeight = if (selectedNoise == type) FontWeight.Bold else FontWeight.Normal)
-                if (selectedNoise == name) { Spacer(modifier = Modifier.weight(1f)); Icon(Icons.Default.VolumeUp, contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(16.dp)) }
+                if (selectedNoise == type) { Spacer(modifier = Modifier.weight(1f)); Icon(Icons.Default.VolumeUp, contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(16.dp)) }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
