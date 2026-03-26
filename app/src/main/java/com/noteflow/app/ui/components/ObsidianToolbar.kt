@@ -29,32 +29,25 @@ private val SurfaceHigh = Color(0xFF2A2A2A)
 private val PrimaryColor = Color(0xFFCABEFF)
 private val DividerColor = Color(0xFF3A3A3A)
 
-@Composable
 fun handleEnterKey(v: TextFieldValue): TextFieldValue {
     val c = v.selection.end.coerceIn(0, v.text.length)
-    val lineStart = if (c == 0) 0 else v.text.lastIndexOf('
-', c - 1) + 1
+    val lineStart = if (c == 0) 0 else v.text.lastIndexOf('\n', c - 1) + 1
     val line = v.text.substring(lineStart, c)
-    val continuation = when {
-        line.matches(Regex("^- \[[ x]] .*")) -> "
-- [ ] "
-        line.startsWith("- ") && line.length > 2 -> "
-- "
-        line.matches(Regex("^\d+\. .*")) -> {
+    val continuation: String? = when {
+        line.matches(Regex("^- \\[[ x]\\] .*")) -> "\n- [ ] "
+        line.startsWith("- ") && line.length > 2 -> "\n- "
+        line.matches(Regex("^\\d+\\. .*")) -> {
             val num = line.substringBefore(".").toIntOrNull() ?: 1
-            "
-${num + 1}. "
+            "\n${num + 1}. "
         }
-        line.startsWith("> ") -> "
-> "
+        line.startsWith("> ") -> "\n> "
         else -> null
     }
     return if (continuation != null) {
         val newText = v.text.substring(0, c) + continuation + v.text.substring(c)
-        TextFieldValue(newText, TextRange(c + continuation.length))
+        TextFieldValue(newText, androidx.compose.ui.text.TextRange(c + continuation.length))
     } else v
 }
-
 fun ObsidianToolbar(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,

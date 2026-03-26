@@ -634,6 +634,7 @@ private fun HomeRightDrawer(onClose: () -> Unit, onNavigateToSettings: () -> Uni
         SimpleDivider(color = OutlineVariant.copy(alpha = 0.3f), verticalPadding = 4)
         DrawerItem(Icons.Default.Logout, "تسجيل الخروج", tint = Color(0xFFFF6B6B)) { onClose() }
     }
+    }
 }
 
 @Composable

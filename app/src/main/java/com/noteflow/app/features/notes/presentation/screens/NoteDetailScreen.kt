@@ -337,8 +337,7 @@ private fun NoteDetailContentField(content: TextFieldValue, onContentChange: (Te
         value = content,
         onValueChange = { new ->
             val handled = if (new.text.length > content.text.length &&
-                new.text.getOrNull(new.selection.end - 1) == '
-') {
+                new.text.getOrNull(new.selection.end - 1) == '\n') {
                 handleEnterKey(new)
             } else new
             onContentChange(handled)
