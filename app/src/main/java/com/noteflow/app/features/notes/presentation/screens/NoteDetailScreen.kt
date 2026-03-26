@@ -458,6 +458,7 @@ private fun parseInlineMarkdown(text: String): androidx.compose.ui.text.Annotate
     }
 }
 
+@Composable
 private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote: (Long) -> Unit, onContentChange: (TextFieldValue) -> Unit = {}) {
     if (content.isBlank()) {
         Text("لا يوجد محتوى", color = OnSurfaceVariant.copy(alpha = 0.5f), fontSize = 16.sp)

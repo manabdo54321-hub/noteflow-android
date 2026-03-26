@@ -48,6 +48,7 @@ fun handleEnterKey(v: TextFieldValue): TextFieldValue {
         TextFieldValue(newText, androidx.compose.ui.text.TextRange(c + continuation.length))
     } else v
 }
+@Composable
 fun ObsidianToolbar(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
