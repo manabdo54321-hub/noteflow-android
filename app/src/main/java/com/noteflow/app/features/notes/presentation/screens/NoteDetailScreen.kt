@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import com.noteflow.app.ui.components.ObsidianToolbar as SharedObsidianToolbar
+import com.noteflow.app.ui.components.MarkdownVisualTransformation as MdTransformation
 import com.noteflow.app.ui.components.handleEnterKey
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -66,53 +67,6 @@ private val AccentColor = Color(0xFF8A70FF)
 private val OnSurfaceVariant = Color(0xFFC8C5CD)
 private val OutlineVariant = Color(0xFF47464C)
 private val ErrorColor = Color(0xFFFF6B6B)
-
-class MarkdownVisualTransformation(
-    private val primaryColor: Color,
-    private val onSurface: Color
-) : VisualTransformation {
-    override fun filter(text: androidx.compose.ui.text.AnnotatedString): TransformedText {
-        val annotated = buildAnnotatedString {
-            val lines = text.text.split("\n")
-            lines.forEachIndexed { lineIndex, line ->
-                when {
-                    line.startsWith("# ") -> {
-                        withStyle(SpanStyle(color = primaryColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)) { append(line) }
-                    }
-                    line.startsWith("## ") -> {
-                        withStyle(SpanStyle(color = primaryColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)) { append(line) }
-                    }
-                    line.startsWith("- ") || line.startsWith("• ") -> {
-                        withStyle(SpanStyle(color = onSurface)) { append("• ${line.substring(2)}") }
-                    }
-                    line.contains("[[") -> {
-                        val regex = Regex("""\[\[(.+?)]]""")
-                        var lastIndex = 0
-                        regex.findAll(line).forEach { match ->
-                            append(line.substring(lastIndex, match.range.first))
-                            withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold)) { append(match.groupValues[1]) }
-                            lastIndex = match.range.last + 1
-                        }
-                        if (lastIndex < line.length) append(line.substring(lastIndex))
-                    }
-                    line.contains("**") -> {
-                        val parts = line.split("**")
-                        parts.forEachIndexed { i, part ->
-                            if (i % 2 == 1) {
-                                withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = onSurface)) { append(part) }
-                            } else {
-                                withStyle(SpanStyle(color = onSurface)) { append(part) }
-                            }
-                        }
-                    }
-                    else -> { withStyle(SpanStyle(color = onSurface)) { append(line) } }
-                }
-                if (lineIndex < lines.size - 1) append("\n")
-            }
-        }
-        return TransformedText(annotated, OffsetMapping.Identity)
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -349,7 +303,7 @@ private fun NoteDetailContentField(content: TextFieldValue, onContentChange: (Te
         },
         textStyle = TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 26.sp, textAlign = TextAlign.Right, textDirection = TextDirection.Content),
         cursorBrush = SolidColor(PrimaryColor),
-        visualTransformation = MarkdownVisualTransformation(primaryColor = PrimaryColor, onSurface = Color.White),
+        visualTransformation = MdTransformation(),
         modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp),
         decorationBox = { inner ->
             if (content.text.isEmpty()) Text("واصل أفكارك...", color = OnSurfaceVariant.copy(alpha = 0.4f), fontSize = 16.sp)
