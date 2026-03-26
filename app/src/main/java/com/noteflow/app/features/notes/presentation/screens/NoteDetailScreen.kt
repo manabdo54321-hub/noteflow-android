@@ -25,6 +25,7 @@ import com.noteflow.app.ui.components.ObsidianToolbar as SharedObsidianToolbar
 import com.noteflow.app.ui.components.handleEnterKey
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -151,6 +152,10 @@ fun NoteDetailScreen(
         Regex("#(\\w+)").findAll(content.text).map { it.groupValues[1] }.toList()
     }
 
+    BackHandler(enabled = isEditMode) {
+        if (title.isNotBlank()) viewModel.saveNote(title, content.text, noteId)
+        onBack()
+    }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Column(modifier = Modifier.fillMaxSize().background(BgColor)) {
         NoteDetailTopBar(

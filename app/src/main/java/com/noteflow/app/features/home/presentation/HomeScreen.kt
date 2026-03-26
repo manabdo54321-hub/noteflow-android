@@ -152,7 +152,7 @@ fun HomeScreen(
                     scrollState.animateScrollTo(scrollState.maxValue)
                 }
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-                    HomeTopBar(greeting, { showLeftDrawer = true }, { showRightDrawer = true }, onNavigateToStats)
+                    HomeTopBar(greeting, { showRightDrawer = true }, { showLeftDrawer = true }, onNavigateToStats)
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Box(modifier = Modifier.graphicsLayer(alpha = writeAlpha)) {
                             HomeQuickWrite(
