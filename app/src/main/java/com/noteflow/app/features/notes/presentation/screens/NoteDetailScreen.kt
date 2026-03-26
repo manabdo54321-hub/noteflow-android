@@ -27,6 +27,9 @@ import com.noteflow.app.ui.components.handleEnterKey
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.systemGestureExclusion
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -304,7 +307,10 @@ private fun NoteDetailContentField(content: TextFieldValue, onContentChange: (Te
         textStyle = TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 26.sp, textAlign = TextAlign.Right, textDirection = TextDirection.Content),
         cursorBrush = SolidColor(PrimaryColor),
         visualTransformation = MdTransformation(),
-        modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 300.dp)
+            .systemGestureExclusion(),
         decorationBox = { inner ->
             if (content.text.isEmpty()) Text("واصل أفكارك...", color = OnSurfaceVariant.copy(alpha = 0.4f), fontSize = 16.sp)
             inner()

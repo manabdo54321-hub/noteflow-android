@@ -176,7 +176,15 @@ private fun rmLinePrefix(v: TextFieldValue, prefix: String): TextFieldValue {
 
 private fun insertWikiLink(v: TextFieldValue): TextFieldValue {
     val c = v.selection.end.coerceIn(0, v.text.length)
-    val insert = "[[]]"
-    val newText = v.text.substring(0, c) + insert + v.text.substring(c)
-    return TextFieldValue(newText, androidx.compose.ui.text.TextRange(c + 2))
+    val s = v.selection.start.coerceIn(0, v.text.length)
+    return if (s != c) {
+        // لو في نص محدد — يحيطه بـ [[ ]]
+        val selected = v.text.substring(s, c)
+        val newText = v.text.substring(0, s) + "[[" + selected + "]]" + v.text.substring(c)
+        TextFieldValue(newText, androidx.compose.ui.text.TextRange(s + 2, c + 2))
+    } else {
+        // لو مفيش نص محدد — يضيف [[ فقط والـ cursor جواها
+        val newText = v.text.substring(0, c) + "[[]]" + v.text.substring(c)
+        TextFieldValue(newText, androidx.compose.ui.text.TextRange(c + 2))
+    }
 }
