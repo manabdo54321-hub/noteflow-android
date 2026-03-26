@@ -22,10 +22,12 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import com.noteflow.app.ui.components.ObsidianToolbar as SharedObsidianToolbar
+import com.noteflow.app.ui.components.handleEnterKey
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.text.buildAnnotatedString
@@ -126,6 +128,15 @@ fun NoteDetailScreen(
     var content by remember(existing) { mutableStateOf(TextFieldValue(existing?.content ?: "")) }
     var isEditMode by remember { mutableStateOf(noteId == 0L) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showSaved by remember { mutableStateOf(false) }
+    LaunchedEffect(content.text, title) {
+        if (title.isNotBlank()) {
+            kotlinx.coroutines.delay(1500)
+            showSaved = true
+            kotlinx.coroutines.delay(2000)
+            showSaved = false
+        }
+    }
     val error by viewModel.error.collectAsState()
 
     LaunchedEffect(title, content) {
@@ -156,6 +167,22 @@ fun NoteDetailScreen(
         LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
             item { NoteDetailTitle(title, isEditMode) { title = it } }
             item { NoteDetailStatsBar(content.text, existing?.updatedAt ?: System.currentTimeMillis(), isEditMode) { isEditMode = !isEditMode } }
+            if (showSaved && isEditMode) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                            .background(Color(0xFF8A70FF).copy(alpha = 0.1f))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.CloudDone, contentDescription = null,
+                            tint = Color(0xFF8A70FF), modifier = Modifier.size(12.dp))
+                        Text("تم الحفظ تلقائياً", fontSize = 10.sp, color = Color(0xFF8A70FF))
+                    }
+                }
+            }
             if (tags.isNotEmpty()) {
                 item { NoteDetailTags(tags) }
             }
@@ -307,8 +334,16 @@ private fun NoteDetailTags(tags: List<String>) {
 @Composable
 private fun NoteDetailContentField(content: TextFieldValue, onContentChange: (TextFieldValue) -> Unit) {
     BasicTextField(
-        value = content, onValueChange = onContentChange,
-        textStyle = TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 26.sp, textAlign = TextAlign.Right),
+        value = content,
+        onValueChange = { new ->
+            val handled = if (new.text.length > content.text.length &&
+                new.text.getOrNull(new.selection.end - 1) == '
+') {
+                handleEnterKey(new)
+            } else new
+            onContentChange(handled)
+        },
+        textStyle = TextStyle(color = Color.White, fontSize = 16.sp, lineHeight = 26.sp, textAlign = TextAlign.Right, textDirection = TextDirection.Content),
         cursorBrush = SolidColor(PrimaryColor),
         visualTransformation = MarkdownVisualTransformation(primaryColor = PrimaryColor, onSurface = Color.White),
         modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp),
@@ -377,6 +412,53 @@ private fun NoteDetailDeleteDialog(title: String, onConfirm: () -> Unit, onDismi
 }
 
 @Composable
+private fun parseInlineMarkdown(text: String): androidx.compose.ui.text.AnnotatedString {
+    return buildAnnotatedString {
+        var i = 0
+        val t = text
+        while (i < t.length) {
+            when {
+                t.startsWith("**", i) -> {
+                    val end = t.indexOf("**", i + 2)
+                    if (end != -1) {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Color.White)) { append(t.substring(i + 2, end)) }
+                        i = end + 2
+                    } else { append(t[i]); i++ }
+                }
+                t.startsWith("~~", i) -> {
+                    val end = t.indexOf("~~", i + 2)
+                    if (end != -1) {
+                        withStyle(SpanStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough, color = Color.White.copy(0.6f))) { append(t.substring(i + 2, end)) }
+                        i = end + 2
+                    } else { append(t[i]); i++ }
+                }
+                t.startsWith("==", i) -> {
+                    val end = t.indexOf("==", i + 2)
+                    if (end != -1) {
+                        withStyle(SpanStyle(background = Color(0xFFCABEFF).copy(0.3f), color = Color.White)) { append(t.substring(i + 2, end)) }
+                        i = end + 2
+                    } else { append(t[i]); i++ }
+                }
+                t.startsWith("*", i) && !t.startsWith("**", i) -> {
+                    val end = t.indexOf("*", i + 1)
+                    if (end != -1) {
+                        withStyle(SpanStyle(fontStyle = FontStyle.Italic, color = Color.White)) { append(t.substring(i + 1, end)) }
+                        i = end + 1
+                    } else { append(t[i]); i++ }
+                }
+                t.startsWith("`", i) -> {
+                    val end = t.indexOf("`", i + 1)
+                    if (end != -1) {
+                        withStyle(SpanStyle(background = Color(0xFF2A2A2A), color = Color(0xFF75D1FF), fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)) { append(t.substring(i + 1, end)) }
+                        i = end + 1
+                    } else { append(t[i]); i++ }
+                }
+                else -> { append(t[i]); i++ }
+            }
+        }
+    }
+}
+
 private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote: (Long) -> Unit, onContentChange: (TextFieldValue) -> Unit = {}) {
     if (content.isBlank()) {
         Text("لا يوجد محتوى", color = OnSurfaceVariant.copy(alpha = 0.5f), fontSize = 16.sp)
@@ -412,11 +494,16 @@ private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote
                             textDecoration = if (isDone) androidx.compose.ui.text.style.TextDecoration.LineThrough else null)
                     }
                 }
+                line.startsWith("### ") -> Text(line.substring(4), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = PrimaryColor)
                 line.startsWith("- ") || line.startsWith("• ") -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("•", color = PrimaryColor, fontSize = 16.sp)
-                        Text(line.substring(2), color = Color.White, fontSize = 16.sp, lineHeight = 24.sp)
+                        Text(parseInlineMarkdown(line.substring(2)), color = Color.White, fontSize = 16.sp, lineHeight = 24.sp)
                     }
+                }
+                line.startsWith("---") -> Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(OutlineVariant.copy(alpha = 0.5f)))
+                line.contains("==") && line.count { it == '=' } >= 4 -> {
+                    Text(parseInlineMarkdown(line), color = Color.White, fontSize = 16.sp, lineHeight = 26.sp)
                 }
                 line.startsWith("> ") -> {
                     Row(modifier = Modifier.fillMaxWidth()) {

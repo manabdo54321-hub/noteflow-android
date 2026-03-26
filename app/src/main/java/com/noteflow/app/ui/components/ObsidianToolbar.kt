@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalView
+import android.view.HapticFeedbackConstants
 
 private val BgColor = Color(0xFF1A1A1A)
 private val SurfaceHigh = Color(0xFF2A2A2A)
@@ -28,6 +30,31 @@ private val PrimaryColor = Color(0xFFCABEFF)
 private val DividerColor = Color(0xFF3A3A3A)
 
 @Composable
+fun handleEnterKey(v: TextFieldValue): TextFieldValue {
+    val c = v.selection.end.coerceIn(0, v.text.length)
+    val lineStart = if (c == 0) 0 else v.text.lastIndexOf('
+', c - 1) + 1
+    val line = v.text.substring(lineStart, c)
+    val continuation = when {
+        line.matches(Regex("^- \[[ x]] .*")) -> "
+- [ ] "
+        line.startsWith("- ") && line.length > 2 -> "
+- "
+        line.matches(Regex("^\d+\. .*")) -> {
+            val num = line.substringBefore(".").toIntOrNull() ?: 1
+            "
+${num + 1}. "
+        }
+        line.startsWith("> ") -> "
+> "
+        else -> null
+    }
+    return if (continuation != null) {
+        val newText = v.text.substring(0, c) + continuation + v.text.substring(c)
+        TextFieldValue(newText, TextRange(c + continuation.length))
+    } else v
+}
+
 fun ObsidianToolbar(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
@@ -73,7 +100,7 @@ fun ObsidianToolbar(
         TBtn("❝") { act(linePrefix(value, "> ")) }
         TBtn("☐") { act(cursor(value, "- [ ] ")) }
         TDiv()
-        TBtn("[[") { act(cursor(value, "[[]]", 2)) }
+        TBtn("[[") { act(insertWikiLink(value)) }
         TBtn("<>") { act(wrap(value, "`")) }
         TBtn("```") { act(cursor(value, "\n```\n\n```\n", 5)) }
         TDiv()
@@ -87,9 +114,13 @@ fun ObsidianToolbar(
 
 @Composable
 private fun TBtn(label: String = "", icon: ImageVector? = null, tint: Color = PrimaryColor, onClick: () -> Unit) {
+    val view = LocalView.current
     Box(
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(SurfaceHigh)
-            .clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 7.dp),
+            .clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onClick()
+            }.padding(horizontal = 10.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center
     ) {
         if (icon != null) Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
@@ -147,4 +178,11 @@ private fun rmLinePrefix(v: TextFieldValue, prefix: String): TextFieldValue {
         val t = v.text.substring(0, ls) + v.text.substring(ls + prefix.length)
         TextFieldValue(t, TextRange(maxOf(ls, c - prefix.length)))
     } else v
+}
+
+private fun insertWikiLink(v: TextFieldValue): TextFieldValue {
+    val c = v.selection.end.coerceIn(0, v.text.length)
+    val insert = "[[]]"
+    val newText = v.text.substring(0, c) + insert + v.text.substring(c)
+    return TextFieldValue(newText, androidx.compose.ui.text.TextRange(c + 2))
 }

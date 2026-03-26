@@ -39,9 +39,12 @@ import com.noteflow.app.ui.components.ObsidianToolbar as SharedObsidianToolbar
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -127,7 +130,16 @@ fun HomeScreen(
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-    Box(modifier = Modifier.fillMaxSize().background(BgColor).imePadding()) {
+    Box(modifier = Modifier
+            .fillMaxSize()
+            .background(BgColor)
+            .imePadding()
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures { _, dragAmount ->
+                    if (dragAmount < -30) showLeftDrawer = true
+                    if (dragAmount > 30) showRightDrawer = true
+                }
+            }) {
         when {
             timerFullScreen -> TimerFullScreen(timeLeft, isRunning, isWorkSession,
                 onToggle = { if (isRunning) timerViewModel.pause() else timerViewModel.start() },
@@ -356,22 +368,22 @@ private fun HomeBottomNav(onWrite: () -> Unit, onShowAddSheet: () -> Unit, onNav
     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp), contentAlignment = Alignment.Center) {
         Row(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(Color(0xFF201F1F).copy(alpha = 0.95f)).padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onWrite() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.EditNote, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(26.dp))
+            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSearch() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Search, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
             }
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToTasks() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Bolt, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
+            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToAi() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AccentColor.copy(alpha = 0.8f), modifier = Modifier.size(26.dp))
             }
             Box(modifier = Modifier.size(60.dp).scale(fabScale).clip(CircleShape)
                 .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
                 .clickable { fabPressed = true; onShowAddSheet() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF131313), modifier = Modifier.size(28.dp))
             }
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToAi() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AccentColor.copy(alpha = 0.8f), modifier = Modifier.size(26.dp))
+            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToTasks() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Bolt, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
             }
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onNavigateToSearch() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Search, contentDescription = null, tint = OnSurface.copy(alpha = 0.5f), modifier = Modifier.size(26.dp))
+            Box(modifier = Modifier.size(52.dp).clip(CircleShape).clickable { onWrite() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.EditNote, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(26.dp))
             }
         }
     }
@@ -381,7 +393,7 @@ private fun HomeBottomNav(onWrite: () -> Unit, onShowAddSheet: () -> Unit, onNav
 private fun HomeQuickWrite(noteTitle: String, noteContent: TextFieldValue, onTitleChange: (String) -> Unit, onContentChange: (TextFieldValue) -> Unit, onFocusChange: (Boolean) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(SurfaceLowest).padding(20.dp)) {
         BasicTextField(value = noteTitle, onValueChange = onTitleChange,
-            textStyle = TextStyle(color = OnSurface, fontSize = 26.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp, textAlign = TextAlign.Right),
+            textStyle = TextStyle(color = OnSurface, fontSize = 26.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp, textAlign = TextAlign.Right, textDirection = TextDirection.Content),
             cursorBrush = SolidColor(PrimaryColor),
             modifier = Modifier.fillMaxWidth().onFocusChanged { onFocusChange(it.isFocused) }, singleLine = true,
             decorationBox = { inner ->
@@ -392,7 +404,7 @@ private fun HomeQuickWrite(noteTitle: String, noteContent: TextFieldValue, onTit
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, OutlineVariant.copy(alpha = 0.4f), Color.Transparent))))
         Spacer(modifier = Modifier.height(12.dp))
         BasicTextField(value = noteContent, onValueChange = onContentChange,
-            textStyle = TextStyle(color = OnSurfaceVariant, fontSize = 15.sp, lineHeight = 26.sp, textAlign = TextAlign.Right),
+            textStyle = TextStyle(color = OnSurfaceVariant, fontSize = 15.sp, lineHeight = 26.sp, textAlign = TextAlign.Right, textDirection = TextDirection.Content),
             cursorBrush = SolidColor(PrimaryColor),
             modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).onFocusChanged { onFocusChange(it.isFocused) },
             decorationBox = { inner ->
@@ -422,8 +434,8 @@ private fun HomeCardsRow(tasks: List<Task>, timeLeft: Long, isRunning: Boolean, 
     val timerMinutes = (timeLeft / 1000) / 60
     val timerSeconds = (timeLeft / 1000) % 60
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        HomeTasksCard(Modifier.weight(1f), activeTasks, completedTasks, totalTasks, completionRate, onToggleTask, onTasksFullScreen)
         HomeTimerCard(Modifier.weight(1f), timerMinutes, timerSeconds, timerProgress, isRunning, onTimerToggle, onTimerFullScreen)
+        HomeTasksCard(Modifier.weight(1f), activeTasks, completedTasks, totalTasks, completionRate, onToggleTask, onTasksFullScreen)
     }
 }
 
@@ -559,18 +571,18 @@ private fun FullScreenTaskRow(task: Task, onToggle: () -> Unit) {
 private fun HomeTopBar(greeting: String, onShowRightDrawer: () -> Unit, onShowLeftDrawer: () -> Unit, onNavigateToStats: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1C1B1B)).statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onShowLeftDrawer) { Icon(Icons.Default.Menu, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(22.dp)) }
+            IconButton(onClick = onNavigateToStats) { Icon(Icons.Default.ShowChart, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(22.dp)) }
+        }
         Row(modifier = Modifier.clickable { onShowRightDrawer() }, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Brush.linearGradient(listOf(PrimaryColor, AccentColor))), contentAlignment = Alignment.Center) {
-                Text("م", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1C0062))
-            }
-            Column {
+            Column(horizontalAlignment = Alignment.End) {
                 Text("WELCOME BACK", fontSize = 10.sp, letterSpacing = 2.sp, color = OnSurface.copy(alpha = 0.5f))
                 Text(greeting, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = PrimaryColor)
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onNavigateToStats) { Icon(Icons.Default.ShowChart, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(22.dp)) }
-            IconButton(onClick = onShowLeftDrawer) { Icon(Icons.Default.Menu, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(22.dp)) }
+            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Brush.linearGradient(listOf(PrimaryColor, AccentColor))), contentAlignment = Alignment.Center) {
+                Text("م", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1C0062))
+            }
         }
     }
 }
@@ -578,6 +590,7 @@ private fun HomeTopBar(greeting: String, onShowRightDrawer: () -> Unit, onShowLe
 @Composable
 private fun HomeLeftDrawer(onClose: () -> Unit, onNavigateToNotes: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToTimer: () -> Unit, onNavigateToStats: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)).clickable { onClose() })
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
     Column(modifier = Modifier.fillMaxHeight().width(280.dp).background(Color(0xFF1C1B1B)).statusBarsPadding().padding(24.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("الأدوات", fontSize = 11.sp, letterSpacing = 2.sp, color = PrimaryColor, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
@@ -588,6 +601,7 @@ private fun HomeLeftDrawer(onClose: () -> Unit, onNavigateToNotes: () -> Unit, o
         DrawerItem(Icons.Default.BarChart, "الإحصائيات") { onClose(); onNavigateToStats() }
         SimpleDivider(color = OutlineVariant.copy(alpha = 0.3f), verticalPadding = 8)
         Text("إضافات", fontSize = 11.sp, letterSpacing = 2.sp, color = PrimaryColor, fontWeight = FontWeight.Bold)
+    }
         Spacer(modifier = Modifier.height(8.dp))
         DrawerItem(Icons.Default.AccountTree, "خريطة الروابط") { onClose() }
         DrawerItem(Icons.Default.Tag, "الوسوم") { onClose() }
@@ -599,6 +613,7 @@ private fun HomeLeftDrawer(onClose: () -> Unit, onNavigateToNotes: () -> Unit, o
 @Composable
 private fun HomeRightDrawer(onClose: () -> Unit, onNavigateToSettings: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)).clickable { onClose() })
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
     Column(modifier = Modifier.fillMaxHeight().width(280.dp).background(Color(0xFF1C1B1B)).statusBarsPadding().padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(52.dp).clip(CircleShape).background(Brush.linearGradient(listOf(PrimaryColor, AccentColor))), contentAlignment = Alignment.Center) {
