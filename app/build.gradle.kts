@@ -83,6 +83,9 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // SceneView 3D
+    implementation("io.github.sceneview:sceneview:2.2.1")
+
     // Gemini AI
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")

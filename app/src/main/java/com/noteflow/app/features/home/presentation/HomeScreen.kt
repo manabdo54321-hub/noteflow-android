@@ -82,6 +82,7 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToAi: () -> Unit,
+    onNavigateToWorld: () -> Unit = {},
     noteViewModel: NoteViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel(),
     taskViewModel: TaskViewModel = hiltViewModel()
@@ -241,7 +242,7 @@ fun HomeScreen(
             )
         }
 
-        if (showLeftDrawer) HomeLeftDrawer({ showLeftDrawer = false }, onNavigateToNotes, onNavigateToTasks, onNavigateToTimer, onNavigateToStats)
+        if (showLeftDrawer) HomeLeftDrawer({ showLeftDrawer = false }, onNavigateToNotes, onNavigateToTasks, onNavigateToTimer, onNavigateToStats, onNavigateToWorld)
         if (showRightDrawer) HomeRightDrawer({ showRightDrawer = false }, onNavigateToSettings)
     }
     } // end CompositionLocalProvider
@@ -588,7 +589,7 @@ private fun HomeTopBar(greeting: String, onShowRightDrawer: () -> Unit, onShowLe
 }
 
 @Composable
-private fun HomeLeftDrawer(onClose: () -> Unit, onNavigateToNotes: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToTimer: () -> Unit, onNavigateToStats: () -> Unit) {
+private fun HomeLeftDrawer(onClose: () -> Unit, onNavigateToNotes: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToTimer: () -> Unit, onNavigateToStats: () -> Unit, onNavigateToWorld: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)).clickable { onClose() })
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
     Column(modifier = Modifier.fillMaxHeight().width(280.dp).background(Color(0xFF1C1B1B)).statusBarsPadding().padding(24.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -606,6 +607,7 @@ private fun HomeLeftDrawer(onClose: () -> Unit, onNavigateToNotes: () -> Unit, o
         DrawerItem(Icons.Default.AccountTree, "خريطة الروابط") { onClose() }
         DrawerItem(Icons.Default.Tag, "الوسوم") { onClose() }
         DrawerItem(Icons.Default.Archive, "الأرشيف") { onClose() }
+        DrawerItem(Icons.Default.Forest, "عالم البناء") { onClose(); onNavigateToWorld() }
         DrawerItem(Icons.Default.FileDownload, "تصدير") { onClose() }
     }
 }
