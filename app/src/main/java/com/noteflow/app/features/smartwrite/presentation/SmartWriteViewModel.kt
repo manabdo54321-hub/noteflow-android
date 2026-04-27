@@ -6,6 +6,7 @@ import com.noteflow.app.features.notes.domain.model.Note
 import com.noteflow.app.features.notes.domain.usecase.SaveNoteUseCase
 import com.noteflow.app.features.tasks.data.repository.TaskRepository
 import com.noteflow.app.features.tasks.domain.model.Task
+import com.noteflow.app.features.tasks.domain.model.TaskPriority
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +17,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.Date
 import javax.inject.Inject
 
 enum class SmartContentType(val label: String, val emoji: String) {
@@ -72,24 +72,22 @@ class SmartWriteViewModel @Inject constructor(
                 val result = callGroq(fullText)
                 _state.value = SmartWriteState.Result(result)
             } catch (e: Exception) {
-                val fallback = buildFallback(title, content)
-                _state.value = SmartWriteState.Result(fallback)
+                _state.value = SmartWriteState.Result(buildFallback(title, content))
             }
         }
     }
 
     private suspend fun callGroq(text: String): SmartWriteResult = withContext(Dispatchers.IO) {
-        val systemPrompt = "انت مساعد ذكي لتنظيم الافكار. حلل النص وارجع JSON فقط بدون اي نص خارجه:\n{\"title\":\"عنوان\",\"type\":\"NOTE|TASK|IDEA|GOAL|FEELING|MIXED\",\"refined\":\"النص المحسن\",\"tags\":[\"وسم\"],\"tasks\":[\"مهمة\"],\"suggestions\":[\"اقتراح\"],\"link_timer\":false,\"minutes\":0}"
+        val systemPrompt = "انت مساعد ذكي لتنظيم الافكار. حلل النص وارجع JSON فقط بدون اي نص خارجه: {\"title\":\"عنوان\",\"type\":\"NOTE|TASK|IDEA|GOAL|FEELING|MIXED\",\"refined\":\"النص المحسن\",\"tags\":[\"وسم\"],\"tasks\":[\"مهمة\"],\"suggestions\":[\"اقتراح\"],\"link_timer\":false,\"minutes\":0}"
         val body = JSONObject().apply {
             put("model", GROQ_MODEL)
             put("max_tokens", 700)
             put("messages", JSONArray().apply {
-                put(JSONObject().apply { put("role","system"); put("content", systemPrompt) })
-                put(JSONObject().apply { put("role","user");   put("content", text) })
+                put(JSONObject().apply { put("role", "system"); put("content", systemPrompt) })
+                put(JSONObject().apply { put("role", "user");   put("content", text) })
             })
         }
-        val url = URL(GROQ_URL)
-        val conn = (url.openConnection() as HttpURLConnection).apply {
+        val conn = (URL(GROQ_URL).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("Authorization", "Bearer $GROQ_API_KEY")
@@ -110,7 +108,7 @@ class SmartWriteViewModel @Inject constructor(
                 .getJSONObject("message")
                 .getString("content").trim()
             val json = JSONObject(content)
-            val type = try { SmartContentType.valueOf(json.optString("type","NOTE")) }
+            val type = try { SmartContentType.valueOf(json.optString("type", "NOTE")) }
                        catch (e: Exception) { SmartContentType.NOTE }
             SmartWriteResult(
                 originalText = original,
@@ -152,10 +150,7 @@ class SmartWriteViewModel @Inject constructor(
             saveNoteUseCase(Note(
                 id = 0,
                 title = result.title,
-                content = result.refinedText,
-                tags = result.tags,
-                createdAt = Date(),
-                updatedAt = Date()
+                content = result.refinedText
             ))
             _state.value = SmartWriteState.Saved("تم الحفظ كملاحظة")
         }
@@ -164,10 +159,11 @@ class SmartWriteViewModel @Inject constructor(
     fun saveTasks(result: SmartWriteResult) {
         viewModelScope.launch {
             result.extractedTasks.forEach { t ->
-                taskRepository.insertTask(Task(
-                    id = 0, title = t, isCompleted = false,
-                    linkedNoteId = null, createdAt = Date(),
-                    dueDate = null, priority = 1
+                taskRepository.saveTask(Task(
+                    id = 0,
+                    title = t,
+                    isCompleted = false,
+                    priority = TaskPriority.MEDIUM
                 ))
             }
             _state.value = SmartWriteState.Saved("تمت اضافة ${result.extractedTasks.size} مهمة")
