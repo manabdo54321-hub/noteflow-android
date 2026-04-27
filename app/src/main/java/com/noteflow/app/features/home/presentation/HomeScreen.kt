@@ -817,7 +817,8 @@ private fun AiTagsRow(tags: List<String>) {
     androidx.compose.foundation.lazy.LazyRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        items(tags) { tag ->
+        items(tags.size) { index ->
+            val tag = tags[index]
             Text(
                 "#$tag",
                 fontSize = 11.sp,
