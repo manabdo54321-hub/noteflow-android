@@ -21,10 +21,10 @@
 - **minSdk:** 26
 - **compileSdk:** 34
 - **targetSdk:** 34
-- **jvmTarget:** 11 ← لا ترجعه لـ 17 أبداً
+- **jvmTarget:** 11
 - **sourceCompatibility:** JavaVersion.VERSION_11
 - **targetCompatibility:** JavaVersion.VERSION_11
-- **Compose BOM:** 2023.08.00 ← لا ترفعه لـ 2024+ على Android 11
+- **Compose BOM:** 2023.08.00
 - **Kotlin Compiler Extension:** 1.5.8
 - **AppCompat:** 1.6.1
 
@@ -36,154 +36,29 @@
 
 ## إعدادات الـ Theme
 - **themes.xml:** parent="Theme.AppCompat.DayNight.NoActionBar"
-- لا تستخدم parent="android:Theme.DeviceDefault" — crash على Android 11
-- **windowSoftInputMode:** adjustResize (مهم للكيبورد في HomeScreen)
+- لا تستخدم parent="android:Theme.DeviceDefault"
+- **windowSoftInputMode:** adjustResize
 
-## قواعد Android 11 — لازم تتبعها دايماً
-1. **VerifyError** — أي Composable function أكبر من ~150 سطر UI logic تعمل crash
-   - الحل: قسّم لـ composables أصغر
-   - الشاشات المقسّمة:
-     - HomeScreen → HomeTopBar, HomeQuickWrite, HomeCardsRow, HomeTasksCard, HomeTimerCard, HomeBottomNav, HomeLeftDrawer, HomeRightDrawer, ObsidianToolbar, HomeWritingMiniBar, AddBottomSheet, TimerFullScreen, TasksFullScreen
-     - NoteDetailScreen → NoteDetailTopBar, NoteDetailTitle, NoteDetailTags, NoteDetailContentField, NoteDetailBacklinksHeader, NoteDetailBacklinkItem, NoteDetailBottomToolbar, NoteDetailDeleteDialog, ReadModeContent
-     - TaskListScreen → TaskListHeader, TaskListTitle, TaskListTabs, TaskSectionLabel, TaskAddEditDialog, TaskNotePickerDialog, TaskDeleteDialog, TaskCard
-     - StatsScreen → StatsHeader, StatsTitle, StatsCompletionCard, StatsFocusCard, StatsNotesCard, StatsFocusDistributionCard, StatsOverviewCard, StatsVersionFooter
-     - SettingsScreen → SettingsHeader, SettingsSectionLabel, SettingsProfileCard, SettingsThemeCard, SettingsFunctionalCard, SettingsSystemCard, SettingsVersionFooter, SettingsToggleRow, SettingsArrowRow, SettingsDivider
-     - TimerScreen → TimerTopBar, TimerTaskSelector, TimerCircleDisplay, TimerMotivationText, TimerMainControls, TimerBottomToolbar, TimerToolBtn, TimerTimePickerDialog, TimeScrollPicker, TimerTaskPickerDialog, TimerConfirmDialog, TimerNoiseBottomSheet, TimerModeBottomSheet, StrictModeSheet, StrictModeItem
-
-2. **Modifier.blur()** — مش موجود على Android 11 — لا تستخدمه أبداً
-3. **CompositingStrategy.Offscreen** — API 31+ فقط — لا تستخدمه
-4. **Compose BOM 2024+** — بيستخدم APIs مش موجودة في Android 11
-5. **jvmTarget = "17"** — بيعمل VerifyError — استخدم "11" دايماً
+## قواعد Android 11
+1. VerifyError — أي Composable أكبر من ~150 سطر → قسّم
+2. Modifier.blur() — مش موجود على Android 11
+3. CompositingStrategy.Offscreen — API 31+ فقط
+4. Compose BOM 2024+ — لا تستخدم
+5. jvmTarget = "17" — بيعمل VerifyError
 
 ## قواعد الكود العامة
 - ملف واحد في كل مرة
-- الألوان الرئيسية: BgColor=#131313, SurfaceColor=#1C1B1B, SurfaceHigh=#2A2A2A, PrimaryColor=#CABEFF, AccentColor=#8A70FF, TertiaryColor=#75D1FF
-- استخدم SimpleDivider أو SettingsDivider (custom Box) مش Divider() ولا HorizontalDivider()
-- لو في تعديل على ملف قديم، ابعت محتواه الأول
-- commit بعد كل ملف شغال
-- أي Composable function أكبر من 150 سطر — قسّمها فوراً
+- الألوان: BgColor=#131313, SurfaceColor=#1C1B1B, SurfaceHigh=#2A2A2A, PrimaryColor=#CABEFF, AccentColor=#8A70FF, TertiaryColor=#75D1FF
+- استخدم SimpleDivider أو SettingsDivider (custom Box)
+- أي Composable أكبر من 150 سطر — قسّمها
 - استخدم TextFieldValue بدل String لأي TextField محتاج cursor control
 
-## هيكل التطبيق الحالي
+## هيكل التطبيق
 
 ### Navigation
-- مفيش Bottom Navigation Bar — اتمسح عشان الشكل يكون نظيف
-- الـ TimerViewModel بيتشارك على مستوى AppNavigation عشان مايوقفش لما المستخدم يرجع
-- كل الـ routes: home, notes, note/{noteId}, tasks, timer, stats, settings, search
-
-### HomeScreen — الرئيسية
-- **Zen Mode:** لما تبدأ الكتابة، المهام والتايمر بيتلاشوا
-- **Obsidian Style Writing:** عنوان + فاصل + محتوى، RTL، cursor بـ PrimaryColor
-- **ObsidianToolbar:** شريط فوق الكيبورد — H1,H2,H3, B, I, S, ==, code, •, 1., ☐, ❝, ```, table, [[, #, indent — بيضيف في مكان الـ cursor بـ TextFieldValue مع smart toggle + undo/redo
-- **HomeWritingMiniBar:** لما تكتب — إنهاء + عدد المهام + وقت التايمر
-- **HomeBottomNav:** ✏️ + ➕ + ⚡ + 🔍 + ⚙️ — الزائد بيفتح AddBottomSheet
-- **AddBottomSheet:** ملاحظة جديدة + مهمة جديدة + ابدأ جلسة تركيز + كل الملاحظات
-- **كارت التايمر:** الضغط عليه يروح لـ TimerScreen
-- **كارت المهام:** الضغط عليه يفتح TasksFullScreen
-- **imePadding():** للتعامل مع الكيبورد
-
-### NoteDetailScreen — تفاصيل الملاحظة
-- **TextFieldValue** للمحتوى (cursor-aware)
-- **ObsidianToolbar مشترك** (SharedObsidianToolbar) يظهر فوق الكيبورد
-- **MarkdownVisualTransformation** للعرض المباشر أثناء الكتابة
-- **handleEnterKey** — smart continuation للقوائم والـ checklist
-- **ReadModeContent** — عرض الـ markdown مع WikiLinks قابلة للضغط
-- **Backlinks** — قائمة بالملاحظات التي تذكر هذه الملاحظة
-- **Auto-save** كل 1.5 ثانية من التوقف عن الكتابة
-- **Tags** — استخراج تلقائي من #tag في المحتوى
-
-### TimerScreen — التايمر
-- **TimerViewModel مشترك** على مستوى AppNavigation — مش بيوقف لما ترجع
-- **اختيار المهمة:** من قائمة المهام النشطة
-- **الدائرة:** نابضة أثناء التشغيل (breatheScale)، بتعرض ساعات:دقائق:ثواني لو الوقت أكبر من ساعة
-- **اضغط على الوقت:** يفتح TimeScrollPicker لاختيار الساعات والدقائق بالسحب
-- **زرار ابدأ التركيز:** أبيض كبير، يتحول لـ "إيقاف مؤقت" أثناء التشغيل
-- **زرار إيقاف + تخطي:** ظاهرين أثناء التشغيل فقط مع Dialog تأكيد
-- **جلسات:** 4 جلسات تركيز → استراحة كبيرة 15 دقيقة، بين كل جلسة استراحة 5 دقائق
-- **جرس + اهتزاز:** لما ينتهي الوقت (RingtoneManager + Vibrator)
-- **رسائل تحفيزية:** تتغير كل جلسة
-- **تنفس موجّه:** في وقت الراحة (شهيق/زفير animation)
-- **ضوضاء بيضاء:** Sheet بـ 7 خيارات (بدون صوت حقيقي لسه — ناقص ملفات mp3)
-- **وضع المؤقت:** تنازلي (افتراضي) أو تصاعدي
-- **الوضع الصارم:**
-  - اقلب الهاتف: Accelerometer — لو رفع موبايله تحذير + اهتزاز
-  - حظر الإشعارات: DND — لو مش موجود permission يفتح الإعدادات تلقائياً
-  - منع الخروج: BackHandler — Dialog تأكيد لو حاول يخرج
-  - قفل الهاتف + حظر التطبيقات: غير متاح (شو بس)
-
-## الملفات الموجودة
-
-### Base
-- settings.gradle.kts / build.gradle.kts / gradle.properties / gradlew
-- app/build.gradle.kts
-- .github/workflows/build.yml
-- app/src/main/AndroidManifest.xml
-- app/src/main/res/values/themes.xml
-- app/src/main/java/com/noteflow/app/MainActivity.kt
-- app/src/main/java/com/noteflow/app/NoteFlowApp.kt (crash logger موجود — يتمسح قبل النشر)
-
-### Core
-- app/src/main/java/com/noteflow/app/core/database/AppDatabase.kt
-- app/src/main/java/com/noteflow/app/core/di/AppModule.kt
-- app/src/main/java/com/noteflow/app/core/navigation/AppNavigation.kt ← فيه TimerViewModel مشترك
-
-### UI Components (مشتركة)
-- app/src/main/java/com/noteflow/app/ui/components/ObsidianToolbar.kt ✅ محدّث — smart toggle + undo/redo + numbered list + code block + table + tag
-- app/src/main/java/com/noteflow/app/ui/components/MarkdownEngine.kt ✅ — MarkdownVisualTransformation + buildMarkdownAnnotated
-
-### الرئيسية
-- app/src/main/java/com/noteflow/app/features/home/presentation/HomeScreen.kt ✅ مقسّمة + Zen Mode + Obsidian + SmartWrite
-
-### الملاحظات
-- app/src/main/java/com/noteflow/app/features/notes/domain/model/Note.kt
-- app/src/main/java/com/noteflow/app/features/notes/data/local/NoteEntity.kt
-- app/src/main/java/com/noteflow/app/features/notes/data/local/NoteDao.kt
-- app/src/main/java/com/noteflow/app/features/notes/data/repository/NoteRepository.kt
-- app/src/main/java/com/noteflow/app/features/notes/domain/usecase/GetNotesUseCase.kt
-- app/src/main/java/com/noteflow/app/features/notes/domain/usecase/SaveNoteUseCase.kt
-- app/src/main/java/com/noteflow/app/features/notes/presentation/NoteViewModel.kt
-- app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteListScreen.kt
-- app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteDetailScreen.kt ✅ مقسّمة + ObsidianToolbar + ReadMode + Backlinks
-
-### المهام
-- app/src/main/java/com/noteflow/app/features/tasks/domain/model/Task.kt
-- app/src/main/java/com/noteflow/app/features/tasks/data/local/TaskEntity.kt
-- app/src/main/java/com/noteflow/app/features/tasks/data/local/TaskDao.kt
-- app/src/main/java/com/noteflow/app/features/tasks/data/repository/TaskRepository.kt
-- app/src/main/java/com/noteflow/app/features/tasks/presentation/TaskViewModel.kt
-- app/src/main/java/com/noteflow/app/features/tasks/presentation/screens/TaskListScreen.kt ✅ مقسّمة
-
-### التايمر
-- app/src/main/java/com/noteflow/app/features/timer/data/local/SessionEntity.kt
-- app/src/main/java/com/noteflow/app/features/timer/data/local/SessionDao.kt
-- app/src/main/java/com/noteflow/app/features/timer/data/repository/SessionRepository.kt
-- app/src/main/java/com/noteflow/app/features/timer/presentation/TimerViewModel.kt ← مشترك في AppNavigation
-- app/src/main/java/com/noteflow/app/features/timer/presentation/screens/TimerScreen.kt ✅ مقسّمة + كل الميزات
-
-### الإحصائيات
-- app/src/main/java/com/noteflow/app/features/stats/presentation/StatsViewModel.kt
-- app/src/main/java/com/noteflow/app/features/stats/presentation/screens/StatsScreen.kt ✅ مقسّمة
-
-### الإعدادات
-- app/src/main/java/com/noteflow/app/features/settings/presentation/screens/SettingsScreen.kt ✅ مقسّمة
-
-### Tags
-- app/src/main/java/com/noteflow/app/features/tags/domain/model/Tag.kt ✅
-- app/src/main/java/com/noteflow/app/features/tags/domain/repository/TagRepository.kt ✅
-- app/src/main/java/com/noteflow/app/features/tags/domain/usecase/TagExtractor.kt ✅
-- app/src/main/java/com/noteflow/app/features/tags/data/local/TagEntity.kt ✅
-- app/src/main/java/com/noteflow/app/features/tags/data/local/TagDao.kt ✅
-- app/src/main/java/com/noteflow/app/features/tags/data/repository/TagRepositoryImpl.kt ✅
-- app/src/main/java/com/noteflow/app/features/tags/presentation/TagViewModel.kt ✅
-- app/src/main/java/com/noteflow/app/features/tags/presentation/TagSuggestionDropdown.kt ✅
-- app/src/main/java/com/noteflow/app/features/tags/presentation/TagDashboardScreen.kt ✅
-
-### البحث
-- app/src/main/java/com/noteflow/app/features/search/presentation/SearchScreen.kt ← ناقص بحث حقيقي
-
-### SmartWrite
-- app/src/main/java/com/noteflow/app/features/smartwrite/presentation/SmartWriteViewModel.kt ✅
-- (مدمج في HomeScreen)
+- مفيش Bottom Navigation Bar
+- TimerViewModel بيتشارك على مستوى AppNavigation
+- Routes: home, notes, note/{noteId}, tasks, timer, stats, settings, search, ai, world, tags
 
 ## المراحل المكتملة
 ✅ المرحلة 0 — Build شغال
@@ -194,28 +69,52 @@
 ✅ المرحلة 5 — إصلاح الـ crash على Android 11
 ✅ المرحلة 5.5 — تقسيم كل الشاشات
 ✅ المرحلة 6 — HomeScreen (Zen Mode + Obsidian + Bottom Sheet)
-✅ المرحلة 7 — TimerScreen كامل (جرس + وضع صارم + اختيار وقت + نبض)
-✅ المرحلة 8.5 — SmartWrite (AI تحليل النص + استخراج عنوان + tags + مهام)
-✅ المرحلة 9 — ObsidianToolbar محسّن (smart toggle + undo/redo + numbered + code block + table + tag)
+✅ المرحلة 7 — TimerScreen كامل
+✅ المرحلة 8.5 — SmartWrite
+✅ المرحلة 9 — ObsidianToolbar محسّن
+✅ المرحلة 9.5 — Tags Integration (جزئي)
+
+## Tags System — الوضع الحالي
+
+### المكتمل ✅
+- Tag.kt, TagRepository.kt, TagExtractor.kt
+- TagEntity, NoteTagCrossRef, TaskTagCrossRef, GoalTagCrossRef
+- TagDao, AppDatabase migration 4→5
+- TagRepositoryImpl
+- TagViewModel, TagSuggestionDropdown, TagDashboardScreen
+- HomeScreen ← TagSuggestionDropdown في QuickWrite ✅
+- TaskListScreen ← TagFilterBar مضافة ✅ (بس فيها مشكلة)
+
+### المشكلة الحالية ⚠️
+TaskListScreen فيها filter بيعمل:
+task.tags.contains(selectedTagId.toString())
+لكن Task model مفيش فيه tags field خالص!
+محتاج نصلح الفلترة عن طريق TagRepository مش Task model
+
+### الحل المطلوب
+- استخدام خيار 2: جيب المهام المرتبطة بتاج من TagRepository
+- TagDao فيه getTasksByTag أو TaskTagCrossRef
+- TaskListScreen تستخدم tagViewModel.getTaskIdsByTag(tagId)
+
+### الناقص في Tags Integration
+- TaskListScreen filter — إصلاح المشكلة ⚠️
+- NoteDetailScreen ← suggestions + highlight
+- GoalsScreen ← مفيش ملف خالص، محتاج يتعمل من الصفر
 
 ## الناقص (الأولوية بالترتيب)
-1. 🔴 SearchScreen حقيقي — بحث في الملاحظات والمهام
-2. 🟠 Tags Integration — HomeScreen QuickWrite + TaskListScreen فلترة
-2. 🟡 الضوضاء البيضاء — ملفات صوت mp3 في res/raw (ناقص الملفات)
-3. 🟢 AI Integration بـ Groq (موجود جزئياً في SmartWrite)
-4. 🟢 Graph View للملاحظات
-5. 🟢 Export PDF
-6. 🔵 مسح crash logger من NoteFlowApp قبل النشر
+1. 🔴 إصلاح TaskListScreen tag filter
+2. 🔴 GoalsScreen — من الصفر
+3. 🟠 NoteDetailScreen ← tag suggestions + highlight
+4. 🟡 SearchScreen حقيقي
+5. 🟡 الضوضاء البيضاء — ملفات mp3
+6. 🟢 AI Integration بـ Groq
+7. 🟢 Graph View
+8. 🟢 Export PDF
+9. 🔵 مسح crash logger من NoteFlowApp
 
 ## الخطوة الجاية
-المرحلة 9.5: Tags Integration
-- HomeScreen ← TagSuggestionDropdown في QuickWrite
-- TaskListScreen ← فلترة بالتاج
-
-## الخطوة بعدها
-المرحلة 10: SearchScreen حقيقي
-- SearchViewModel — بحث في NoteDao + TaskDao
-- نتائج فورية مع debounce 300ms
-- فلترة: كل / ملاحظات / مهام
-- تظليل الكلمة المبحوثة في النتائج
-- الضغط على نتيجة → فتح الملاحظة أو المهمة
+إصلاح TaskListScreen tag filter:
+1. شوف TagDao — هل فيه getTaskIdsByTag؟
+2. لو موجود → استخدمه في TagViewModel
+3. لو مش موجود → نضيفه في TagDao
+4. نعدّل TaskListScreen تستخدم tagViewModel بشكل صح
