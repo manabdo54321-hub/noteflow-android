@@ -23,6 +23,7 @@ import com.noteflow.app.features.tasks.presentation.screens.TaskListScreen
 import com.noteflow.app.features.timer.presentation.TimerViewModel
 import com.noteflow.app.features.timer.presentation.screens.TimerScreen
 import com.noteflow.app.features.world.presentation.WorldScreen
+import com.noteflow.app.features.tags.presentation.TagDashboardScreen
 
 private val BgColor = Color(0xFF131313)
 
@@ -95,7 +96,10 @@ fun AppNavigation(
                     onNoteClick = { id -> navController.navigate("note/$id") }
                 )
             }
-            composable("world") {
+            composable("tags") {
+                TagDashboardScreen(onBack = { navController.popBackStack() })
+        }
+        composable("world") {
                 WorldScreen(onBack = { navController.popBackStack() })
             }
         }
