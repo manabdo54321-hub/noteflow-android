@@ -17,6 +17,8 @@ import com.noteflow.app.features.tags.data.local.NoteTagCrossRef
 import com.noteflow.app.features.tags.data.local.TaskTagCrossRef
 import com.noteflow.app.features.tags.data.local.GoalTagCrossRef
 import com.noteflow.app.features.tags.data.local.TagDao
+import com.noteflow.app.features.goals.data.local.GoalDao
+import com.noteflow.app.features.goals.data.local.GoalEntity
 
 @Database(
     entities = [
@@ -27,9 +29,10 @@ import com.noteflow.app.features.tags.data.local.TagDao
         TagEntity::class,
         NoteTagCrossRef::class,
         TaskTagCrossRef::class,
-        GoalTagCrossRef::class
+        GoalTagCrossRef::class,
+        GoalEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -39,6 +42,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
     abstract fun aiChatDao(): AiChatDao
     abstract fun tagDao(): TagDao
+    abstract fun goalDao(): GoalDao
 
     companion object {
         val MIGRATION_4_5 = object : Migration(4, 5) {
@@ -55,7 +59,7 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                 """)
                 database.execSQL("""
-                    CREATE UNIQUE INDEX IF NOT EXISTS index_tags_normalizedName 
+                    CREATE UNIQUE INDEX IF NOT EXISTS index_tags_normalizedName
                     ON tags(normalizedName)
                 """)
                 database.execSQL("""
@@ -77,6 +81,22 @@ abstract class AppDatabase : RoomDatabase() {
                         goalId INTEGER NOT NULL,
                         tagId INTEGER NOT NULL,
                         PRIMARY KEY(goalId, tagId)
+                    )
+                """)
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS goals (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT NOT NULL DEFAULT '',
+                        isCompleted INTEGER NOT NULL DEFAULT 0,
+                        progress INTEGER NOT NULL DEFAULT 0,
+                        targetDate INTEGER,
+                        createdAt INTEGER NOT NULL
                     )
                 """)
             }

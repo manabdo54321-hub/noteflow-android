@@ -13,6 +13,9 @@ import com.noteflow.app.features.ai.data.local.AiChatDao
 import com.noteflow.app.features.ai.data.AiActionExecutor
 import com.noteflow.app.core.sound.SoundManager
 import com.noteflow.app.features.tags.data.local.TagDao
+import com.noteflow.app.features.goals.data.local.GoalDao
+import com.noteflow.app.features.goals.data.repository.GoalRepositoryImpl
+import com.noteflow.app.features.goals.domain.repository.GoalRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -74,6 +77,16 @@ object AppModule {
     @Singleton
     fun provideTagDao(database: AppDatabase): TagDao =
         database.tagDao()
+
+    @Provides
+    @Singleton
+    fun provideGoalDao(database: AppDatabase): GoalDao =
+        database.goalDao()
+
+    @Provides
+    @Singleton
+    fun provideGoalRepository(goalDao: GoalDao): GoalRepository =
+        GoalRepositoryImpl(goalDao)
 
     @Provides
     @Singleton
