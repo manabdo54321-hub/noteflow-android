@@ -118,3 +118,25 @@
 ## آخر حاجة وصلنا ليها
 GoalsScreen اتعملت بالكامل وعمل build ✅
 الخطوة الجاية: NoteDetailScreen ← tag suggestions + highlight
+
+## قواعد العمل من Termux
+- الملفات بتتكتب بـ cat > file << 'EOF'
+- التعديلات الصغيرة (سطرين/ثلاثة) → nano مباشرة
+- nano 9.0 مثبت ✅
+- كل ملف 100-150 سطر max
+- لا تستخدم printf مع نصوص عربية
+- الرفع دايماً: git add -A && git commit -m "..." && git push
+- GitHub Actions هو اللي يبني — مش Termux
+- لو فشل البناء: اقرأ السطر الأول من الخطأ بس
+
+## طريقة التعامل مع Claude
+- في أول كل محادثة جديدة: ابعت محتوى CONTEXT.md
+- بعدين قول: "اقرا CONTEXT.md وابدأ من الخطوة الجاية"
+- قبل أي كود: Claude لازم يشوف الملف الحالي الأول
+- Claude مش بيبدأ أي تعديل إلا بموافقتك
+- لو الملف كبير: بيتقسم لملفات صغيرة من الأول
+
+## الخطة المعتمدة
+- الخطة المعتمدة هي NoteFlow_Guide_v2
+- مسار الملفات الجديدة للـ Goals:
+  features/goals/presentation/GoalsUtils.kt (مش utils/)
