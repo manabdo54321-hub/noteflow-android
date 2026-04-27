@@ -12,6 +12,7 @@ import com.noteflow.app.features.timer.data.repository.SessionRepository
 import com.noteflow.app.features.ai.data.local.AiChatDao
 import com.noteflow.app.features.ai.data.AiActionExecutor
 import com.noteflow.app.core.sound.SoundManager
+import com.noteflow.app.features.tags.data.local.TagDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,7 +33,7 @@ object AppModule {
         AppDatabase::class.java,
         "noteflow_database"
     ).fallbackToDestructiveMigration()
-     .build()
+        .build()
 
     @Provides
     @Singleton
@@ -71,15 +72,19 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideTagDao(database: AppDatabase): TagDao =
+        database.tagDao()
+
+    @Provides
+    @Singleton
     fun provideSoundManager(
         @ApplicationContext context: android.content.Context
     ): SoundManager = SoundManager(context)
 
-
     @Provides
     @Singleton
     fun provideAiActionExecutor(
-        taskRepository: com.noteflow.app.features.tasks.data.repository.TaskRepository,
-        noteRepository: com.noteflow.app.features.notes.data.repository.NoteRepository
+        taskRepository: TaskRepository,
+        noteRepository: NoteRepository
     ): AiActionExecutor = AiActionExecutor(taskRepository, noteRepository)
 }
