@@ -7,16 +7,12 @@ import com.noteflow.app.features.notes.domain.usecase.SaveNoteUseCase
 import com.noteflow.app.features.tasks.data.repository.TaskRepository
 import com.noteflow.app.features.tasks.domain.model.Task
 import com.noteflow.app.features.tasks.domain.model.TaskPriority
+import com.noteflow.app.features.ai.data.AiRepository
+import com.noteflow.app.features.ai.data.AiMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 import javax.inject.Inject
 
 enum class SmartContentType(val label: String, val emoji: String) {
@@ -51,14 +47,9 @@ sealed class SmartWriteState {
 @HiltViewModel
 class SmartWriteViewModel @Inject constructor(
     private val saveNoteUseCase: SaveNoteUseCase,
-    private val taskRepository: TaskRepository
+    private val taskRepository: TaskRepository,
+    private val aiRepository: AiRepository
 ) : ViewModel() {
-
-    companion object {
-        const val GROQ_API_KEY = "YOUR_GROQ_API_KEY_HERE"
-        const val GROQ_MODEL = "llama3-8b-8192"
-        const val GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-    }
 
     private val _state = MutableStateFlow<SmartWriteState>(SmartWriteState.Idle)
     val state: StateFlow<SmartWriteState> = _state
@@ -77,37 +68,23 @@ class SmartWriteViewModel @Inject constructor(
         }
     }
 
-    private suspend fun callGroq(text: String): SmartWriteResult = withContext(Dispatchers.IO) {
+    private suspend fun callGroq(text: String): SmartWriteResult {
         val systemPrompt = "انت مساعد ذكي لتنظيم الافكار. حلل النص وارجع JSON فقط بدون اي نص خارجه: {\"title\":\"عنوان\",\"type\":\"NOTE|TASK|IDEA|GOAL|FEELING|MIXED\",\"refined\":\"النص المحسن\",\"tags\":[\"وسم\"],\"tasks\":[\"مهمة\"],\"suggestions\":[\"اقتراح\"],\"link_timer\":false,\"minutes\":0}"
-        val body = JSONObject().apply {
-            put("model", GROQ_MODEL)
-            put("max_tokens", 700)
-            put("messages", JSONArray().apply {
-                put(JSONObject().apply { put("role", "system"); put("content", systemPrompt) })
-                put(JSONObject().apply { put("role", "user");   put("content", text) })
-            })
+        val result = aiRepository.sendMessage(
+            history = emptyList(),
+            userMessage = text,
+            systemContext = systemPrompt
+        )
+        return if (result.isSuccess) {
+            parseResponse(result.getOrDefault(""), text)
+        } else {
+            buildFallback("", text)
         }
-        val conn = (URL(GROQ_URL).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("Authorization", "Bearer $GROQ_API_KEY")
-            doOutput = true
-            connectTimeout = 15000
-            readTimeout = 20000
-        }
-        conn.outputStream.use { it.write(body.toString().toByteArray()) }
-        val response = conn.inputStream.bufferedReader().readText()
-        parseResponse(response, text)
     }
 
     private fun parseResponse(response: String, original: String): SmartWriteResult {
         return try {
-            val content = JSONObject(response)
-                .getJSONArray("choices")
-                .getJSONObject(0)
-                .getJSONObject("message")
-                .getString("content").trim()
-            val json = JSONObject(content)
+            val json = org.json.JSONObject(response.trim())
             val type = try { SmartContentType.valueOf(json.optString("type", "NOTE")) }
                        catch (e: Exception) { SmartContentType.NOTE }
             SmartWriteResult(
@@ -126,7 +103,7 @@ class SmartWriteViewModel @Inject constructor(
         }
     }
 
-    private fun JSONArray?.toList(): List<String> {
+    private fun org.json.JSONArray?.toList(): List<String> {
         if (this == null) return emptyList()
         return (0 until length()).map { getString(it) }
     }
