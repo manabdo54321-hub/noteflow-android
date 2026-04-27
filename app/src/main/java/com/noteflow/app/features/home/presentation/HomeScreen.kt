@@ -56,6 +56,10 @@ import com.noteflow.app.features.timer.presentation.TimerViewModel
 import com.noteflow.app.features.smartwrite.presentation.SmartWriteViewModel
 import com.noteflow.app.features.smartwrite.presentation.SmartWriteState
 import com.noteflow.app.features.smartwrite.presentation.SmartWriteResult
+import com.noteflow.app.features.tags.presentation.TagViewModel
+import com.noteflow.app.features.tags.presentation.TagSuggestionDropdown
+import com.noteflow.app.features.tags.domain.model.Tag
+import com.noteflow.app.features.tags.presentation.extractCurrentTagPrefix
 import java.util.Calendar
 
 private val BgColor = Color(0xFF131313)
@@ -89,13 +93,15 @@ fun HomeScreen(
     noteViewModel: NoteViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel(),
     taskViewModel: TaskViewModel = hiltViewModel(),
-    smartWriteViewModel: SmartWriteViewModel = hiltViewModel()
+    smartWriteViewModel: SmartWriteViewModel = hiltViewModel(),
+    tagViewModel: TagViewModel = hiltViewModel()
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val timeLeft by timerViewModel.timeLeft.collectAsState()
     val isRunning by timerViewModel.isRunning.collectAsState()
     val isWorkSession by timerViewModel.isWorkSession.collectAsState()
     val smartWriteState by smartWriteViewModel.state.collectAsState()
+    val tagSuggestions by tagViewModel.suggestions.collectAsState()
     var showAiSheet by remember { mutableStateOf(false) }
     var noteTitle by remember { mutableStateOf("") }
     var noteContent by remember { mutableStateOf(TextFieldValue("")) }
@@ -166,8 +172,15 @@ fun HomeScreen(
                                 noteTitle = noteTitle,
                                 noteContent = noteContent,
                                 onTitleChange = { noteTitle = it },
-                                onContentChange = { noteContent = it },
-                                onFocusChange = { isWriting = it }
+                                onContentChange = {
+                                    noteContent = it
+                                    tagViewModel.onSuggestionQuery(
+                                        extractCurrentTagPrefix(it.text) ?: ""
+                                    )
+                                },
+                                onFocusChange = { isWriting = it },
+                                tagSuggestions = tagSuggestions,
+                                onTagSelected = { tagViewModel.onSuggestionQuery("") }
                             )
                         }
                         if (!isWriting) {
@@ -413,7 +426,15 @@ private fun HomeBottomNav(onWrite: () -> Unit, onShowAddSheet: () -> Unit, onNav
 }
 
 @Composable
-private fun HomeQuickWrite(noteTitle: String, noteContent: TextFieldValue, onTitleChange: (String) -> Unit, onContentChange: (TextFieldValue) -> Unit, onFocusChange: (Boolean) -> Unit) {
+private fun HomeQuickWrite(
+    noteTitle: String,
+    noteContent: TextFieldValue,
+    onTitleChange: (String) -> Unit,
+    onContentChange: (TextFieldValue) -> Unit,
+    onFocusChange: (Boolean) -> Unit,
+    tagSuggestions: List<Tag> = emptyList(),
+    onTagSelected: (Tag) -> Unit = {}
+) {
     Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(SurfaceLowest).padding(20.dp)) {
         BasicTextField(value = noteTitle, onValueChange = onTitleChange,
             textStyle = TextStyle(color = OnSurface, fontSize = 26.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp, textAlign = TextAlign.Right, textDirection = TextDirection.Content),
@@ -434,6 +455,17 @@ private fun HomeQuickWrite(noteTitle: String, noteContent: TextFieldValue, onTit
                 if (noteContent.text.isEmpty()) Text("اكتب أفكارك هنا...", color = OnSurfaceVariant.copy(alpha = 0.25f), fontSize = 15.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right)
                 inner()
             })
+        if (tagSuggestions.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            TagSuggestionDropdown(
+                query = noteContent.text,
+                suggestions = tagSuggestions,
+                selectedTags = emptyList(),
+                onQueryChange = { },
+                onTagSelected = onTagSelected,
+                onTagRemoved = { }
+            )
+        }
         if (noteTitle.isNotBlank() || noteContent.text.isNotBlank()) {
             Spacer(modifier = Modifier.height(8.dp))
             val wordCount = noteContent.text.trim().split(" +".toRegex()).filter { it.isNotBlank() }.size

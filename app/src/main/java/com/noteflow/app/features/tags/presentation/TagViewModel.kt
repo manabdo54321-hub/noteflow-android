@@ -5,9 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.noteflow.app.features.tags.domain.model.Tag
 import com.noteflow.app.features.tags.domain.repository.TagRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -25,10 +28,24 @@ class TagViewModel @Inject constructor(
     private val _selectedTagId = MutableStateFlow<Long?>(null)
     val selectedTagId: StateFlow<Long?> = _selectedTagId
 
+    private val _taskIdsByTag = MutableStateFlow<List<Long>>(emptyList())
+    val taskIdsByTag: StateFlow<List<Long>> = _taskIdsByTag
+
     init {
         viewModelScope.launch {
             tagRepository.getAllTags().collectLatest {
                 _allTags.value = it
+            }
+        }
+        viewModelScope.launch {
+            _selectedTagId.collectLatest { tagId ->
+                if (tagId == null) {
+                    _taskIdsByTag.value = emptyList()
+                } else {
+                    tagRepository.getTaskIdsByTag(tagId).collectLatest {
+                        _taskIdsByTag.value = it
+                    }
+                }
             }
         }
     }

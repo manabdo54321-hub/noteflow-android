@@ -27,6 +27,8 @@ import com.noteflow.app.features.notes.presentation.NoteViewModel
 import com.noteflow.app.features.tasks.domain.model.Task
 import com.noteflow.app.features.tasks.domain.model.TaskPriority
 import com.noteflow.app.features.tasks.presentation.TaskViewModel
+import com.noteflow.app.features.tags.presentation.TagViewModel
+import com.noteflow.app.features.tags.domain.model.Tag
 
 private val BgColor = Color(0xFF131313)
 private val SurfaceColor = Color(0xFF1C1B1B)
@@ -42,10 +44,15 @@ private val TertiaryColor = Color(0xFF75D1FF)
 fun TaskListScreen(
     onNavigateToNote: (Long) -> Unit = {},
     taskViewModel: TaskViewModel = hiltViewModel(),
-    noteViewModel: NoteViewModel = hiltViewModel()
+    noteViewModel: NoteViewModel = hiltViewModel(),
+    tagViewModel: TagViewModel = hiltViewModel()
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val notes by noteViewModel.notes.collectAsState()
+    val allTags by tagViewModel.allTags.collectAsState()
+    val selectedTagId by tagViewModel.selectedTagId.collectAsState()
+    val taskIdsByTag by tagViewModel.taskIdsByTag.collectAsState()
+
     var selectedTab by remember { mutableStateOf(0) }
     var showDialog by remember { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<Task?>(null) }
@@ -54,7 +61,9 @@ fun TaskListScreen(
     var showNotePicker by remember { mutableStateOf(false) }
     var taskToDelete by remember { mutableStateOf<Task?>(null) }
 
-    val activeTasks = tasks.filter { !it.isCompleted }
+    val allActiveTasks = tasks.filter { !it.isCompleted }
+    val activeTasks = if (selectedTagId == null) allActiveTasks
+                      else allActiveTasks.filter { task -> taskIdsByTag.contains(task.id) }
     val completedTasks = tasks.filter { it.isCompleted }
     val highPriority = activeTasks.filter { it.priority == TaskPriority.HIGH }
     val routineTasks = activeTasks.filter { it.priority != TaskPriority.HIGH }
@@ -64,18 +73,27 @@ fun TaskListScreen(
             item { TaskListHeader() }
             item { TaskListTitle(activeTasks.size) }
             item { TaskListTabs(selectedTab) { selectedTab = it } }
+            if (allTags.isNotEmpty()) {
+                item {
+                    TagFilterBar(allTags, selectedTagId) { tag ->
+                        tagViewModel.selectTag(if (selectedTagId == tag.id) null else tag.id)
+                    }
+                }
+            }
             when (selectedTab) {
                 0 -> {
                     if (highPriority.isNotEmpty()) {
                         item { TaskSectionLabel("أولوية عالية", HighPriorityColor) }
                         items(highPriority, key = { it.id }) { task ->
-                            TaskCard(task = task,
+                            TaskCard(
+                                task = task,
                                 linkedNoteName = notes.find { it.id == task.noteId }?.title,
                                 badge = "وقت محدود", badgeColor = HighPriorityColor, isHighPriority = true,
                                 onToggle = { taskViewModel.toggleComplete(task) },
                                 onDelete = { taskToDelete = task },
                                 onEdit = { editingTask = task; newTitle = task.title; selectedNoteId = task.noteId; showDialog = true },
-                                onNoteClick = { task.noteId?.let { onNavigateToNote(it) } })
+                                onNoteClick = { task.noteId?.let { onNavigateToNote(it) } }
+                            )
                         }
                     }
                     if (routineTasks.isNotEmpty()) {
@@ -83,13 +101,15 @@ fun TaskListScreen(
                         items(routineTasks, key = { it.id }) { task ->
                             val badge = when (task.priority) { TaskPriority.MEDIUM -> "عمل"; TaskPriority.LOW -> "شخصي"; else -> null }
                             val badgeColor = when (task.priority) { TaskPriority.MEDIUM -> TertiaryColor; else -> OnSurfaceVariant }
-                            TaskCard(task = task,
+                            TaskCard(
+                                task = task,
                                 linkedNoteName = notes.find { it.id == task.noteId }?.title,
                                 badge = badge, badgeColor = badgeColor, isHighPriority = false,
                                 onToggle = { taskViewModel.toggleComplete(task) },
                                 onDelete = { taskToDelete = task },
                                 onEdit = { editingTask = task; newTitle = task.title; selectedNoteId = task.noteId; showDialog = true },
-                                onNoteClick = { task.noteId?.let { onNavigateToNote(it) } })
+                                onNoteClick = { task.noteId?.let { onNavigateToNote(it) } }
+                            )
                         }
                     }
                     if (activeTasks.isEmpty()) {
@@ -120,24 +140,28 @@ fun TaskListScreen(
                         }
                     } else {
                         items(completedTasks, key = { it.id }) { task ->
-                            TaskCard(task = task,
+                            TaskCard(
+                                task = task,
                                 linkedNoteName = notes.find { it.id == task.noteId }?.title,
                                 badge = null, badgeColor = Color.Transparent, isHighPriority = false,
                                 onToggle = { taskViewModel.toggleComplete(task) },
                                 onDelete = { taskToDelete = task },
                                 onEdit = {},
-                                onNoteClick = { task.noteId?.let { onNavigateToNote(it) } })
+                                onNoteClick = { task.noteId?.let { onNavigateToNote(it) } }
+                            )
                         }
                     }
                 }
             }
         }
 
-        Box(modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp)
-            .size(56.dp).clip(RoundedCornerShape(16.dp))
-            .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
-            .clickable { editingTask = null; newTitle = ""; selectedNoteId = null; showDialog = true },
-            contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp)
+                .size(56.dp).clip(RoundedCornerShape(16.dp))
+                .background(Brush.linearGradient(listOf(PrimaryColor, AccentColor)))
+                .clickable { editingTask = null; newTitle = ""; selectedNoteId = null; showDialog = true },
+            contentAlignment = Alignment.Center
+        ) {
             Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF1C0062), modifier = Modifier.size(28.dp))
         }
     }
@@ -219,8 +243,10 @@ private fun TaskSectionLabel(label: String, color: Color) {
 }
 
 @Composable
-private fun TaskAddEditDialog(editingTask: Task?, newTitle: String, notes: List<Note>, selectedNoteId: Long?,
-    onTitleChange: (String) -> Unit, onShowNotePicker: () -> Unit, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+private fun TaskAddEditDialog(
+    editingTask: Task?, newTitle: String, notes: List<Note>, selectedNoteId: Long?,
+    onTitleChange: (String) -> Unit, onShowNotePicker: () -> Unit, onConfirm: () -> Unit, onDismiss: () -> Unit
+) {
     AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceColor,
         title = { Text(if (editingTask != null) "تعديل المهمة" else "مهمة جديدة", color = Color.White) },
         text = {
@@ -271,8 +297,10 @@ private fun TaskDeleteDialog(task: Task, onConfirm: () -> Unit, onDismiss: () ->
 }
 
 @Composable
-fun TaskCard(task: Task, linkedNoteName: String?, badge: String?, badgeColor: Color, isHighPriority: Boolean,
-    onToggle: () -> Unit, onDelete: () -> Unit, onEdit: () -> Unit, onNoteClick: () -> Unit) {
+fun TaskCard(
+    task: Task, linkedNoteName: String?, badge: String?, badgeColor: Color, isHighPriority: Boolean,
+    onToggle: () -> Unit, onDelete: () -> Unit, onEdit: () -> Unit, onNoteClick: () -> Unit
+) {
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
         .clip(RoundedCornerShape(12.dp)).background(SurfaceColor)
         .then(if (isHighPriority) Modifier.border(1.dp, HighPriorityColor.copy(alpha = 0.4f), RoundedCornerShape(12.dp)) else Modifier)
@@ -314,6 +342,37 @@ fun TaskCard(task: Task, linkedNoteName: String?, badge: String?, badgeColor: Co
         }
         IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
             Icon(Icons.Default.Delete, contentDescription = null, tint = HighPriorityColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun TagFilterBar(tags: List<Tag>, selectedTagId: Long?, onTagClick: (Tag) -> Unit) {
+    androidx.compose.foundation.lazy.LazyRow(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(tags) { tag ->
+            val isSelected = selectedTagId == tag.id
+            val chipColor = if (tag.color != null) {
+                try { Color(android.graphics.Color.parseColor(tag.color)) }
+                catch (e: Exception) { AccentColor }
+            } else AccentColor
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(if (isSelected) chipColor.copy(alpha = 0.3f) else SurfaceColor)
+                    .border(1.dp, if (isSelected) chipColor else chipColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                    .clickable { onTagClick(tag) }
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
+            ) {
+                Text(
+                    text = "#${tag.name}",
+                    fontSize = 12.sp,
+                    color = if (isSelected) chipColor else OnSurfaceVariant,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                )
+            }
         }
     }
 }
