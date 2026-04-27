@@ -60,6 +60,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.noteflow.app.features.notes.domain.model.Note
 import com.noteflow.app.features.notes.presentation.NoteViewModel
+import com.noteflow.app.features.tags.presentation.TagViewModel
+import com.noteflow.app.features.tags.presentation.TagSuggestionDropdown
+import com.noteflow.app.features.tags.presentation.extractCurrentTagPrefix
+import androidx.hilt.navigation.compose.hiltViewModel as tagHiltViewModel
 
 private val BgColor = Color(0xFF131313)
 private val SurfaceColor = Color(0xFF1C1B1B)
@@ -78,6 +82,8 @@ fun NoteDetailScreen(
     onNavigateToNote: (Long) -> Unit,
     viewModel: NoteViewModel = hiltViewModel()
 ) {
+    val tagViewModel: TagViewModel = tagHiltViewModel()
+    val suggestions by tagViewModel.suggestions.collectAsState()
     val notes by viewModel.notes.collectAsState()
     val backlinks by viewModel.backlinks.collectAsState()
     val existing = remember(noteId, notes) { notes.find { it.id == noteId } }
@@ -100,6 +106,10 @@ fun NoteDetailScreen(
         if (title.isNotBlank()) viewModel.triggerAutoSave(title, content.text, noteId)
     }
     LaunchedEffect(error) { if (error != null) viewModel.clearError() }
+    LaunchedEffect(content.text) {
+        val prefix = extractCurrentTagPrefix(content.text)
+        tagViewModel.onSuggestionQuery(prefix ?: "")
+    }
     LaunchedEffect(noteId, title) {
         if (noteId != 0L && title.isNotBlank()) viewModel.loadBacklinks(title, noteId)
     }
@@ -174,7 +184,19 @@ fun NoteDetailScreen(
             enter = slideInVertically(initialOffsetY = { it }),
             exit = slideOutVertically(targetOffsetY = { it })
         ) {
-            SharedObsidianToolbar(
+            TagSuggestionDropdown(
+                    query = content.text,
+                    suggestions = suggestions,
+                    selectedTags = emptyList(),
+                    onQueryChange = { newText ->
+                        content = content.copy(text = newText,
+                            selection = androidx.compose.ui.text.TextRange(newText.length))
+                    },
+                    onTagSelected = { tag -> tagViewModel.selectTag(tag.id) },
+                    onTagRemoved = {},
+                    modifier = Modifier.fillMaxWidth().background(SurfaceColor).padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+                SharedObsidianToolbar(
                 value = content,
                 onValueChange = { content = it },
                 modifier = Modifier.navigationBarsPadding()
