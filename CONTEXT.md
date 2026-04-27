@@ -74,13 +74,23 @@
 ### HomeScreen — الرئيسية
 - **Zen Mode:** لما تبدأ الكتابة، المهام والتايمر بيتلاشوا
 - **Obsidian Style Writing:** عنوان + فاصل + محتوى، RTL، cursor بـ PrimaryColor
-- **ObsidianToolbar:** شريط فوق الكيبورد فيه H1, H2, H3, B, I, •, ❝, [[, <>, —, ☐, @ — بيضيف في مكان الـ cursor بـ TextFieldValue
+- **ObsidianToolbar:** شريط فوق الكيبورد — H1,H2,H3, B, I, S, ==, code, •, 1., ☐, ❝, ```, table, [[, #, indent — بيضيف في مكان الـ cursor بـ TextFieldValue مع smart toggle + undo/redo
 - **HomeWritingMiniBar:** لما تكتب — إنهاء + عدد المهام + وقت التايمر
 - **HomeBottomNav:** ✏️ + ➕ + ⚡ + 🔍 + ⚙️ — الزائد بيفتح AddBottomSheet
 - **AddBottomSheet:** ملاحظة جديدة + مهمة جديدة + ابدأ جلسة تركيز + كل الملاحظات
 - **كارت التايمر:** الضغط عليه يروح لـ TimerScreen
 - **كارت المهام:** الضغط عليه يفتح TasksFullScreen
 - **imePadding():** للتعامل مع الكيبورد
+
+### NoteDetailScreen — تفاصيل الملاحظة
+- **TextFieldValue** للمحتوى (cursor-aware)
+- **ObsidianToolbar مشترك** (SharedObsidianToolbar) يظهر فوق الكيبورد
+- **MarkdownVisualTransformation** للعرض المباشر أثناء الكتابة
+- **handleEnterKey** — smart continuation للقوائم والـ checklist
+- **ReadModeContent** — عرض الـ markdown مع WikiLinks قابلة للضغط
+- **Backlinks** — قائمة بالملاحظات التي تذكر هذه الملاحظة
+- **Auto-save** كل 1.5 ثانية من التوقف عن الكتابة
+- **Tags** — استخراج تلقائي من #tag في المحتوى
 
 ### TimerScreen — التايمر
 - **TimerViewModel مشترك** على مستوى AppNavigation — مش بيوقف لما ترجع
@@ -93,7 +103,7 @@
 - **جرس + اهتزاز:** لما ينتهي الوقت (RingtoneManager + Vibrator)
 - **رسائل تحفيزية:** تتغير كل جلسة
 - **تنفس موجّه:** في وقت الراحة (شهيق/زفير animation)
-- **ضوضاء بيضاء:** Sheet بـ 7 خيارات (بدون صوت حقيقي لسه — ناقص ملفات)
+- **ضوضاء بيضاء:** Sheet بـ 7 خيارات (بدون صوت حقيقي لسه — ناقص ملفات mp3)
 - **وضع المؤقت:** تنازلي (افتراضي) أو تصاعدي
 - **الوضع الصارم:**
   - اقلب الهاتف: Accelerometer — لو رفع موبايله تحذير + اهتزاز
@@ -117,8 +127,12 @@
 - app/src/main/java/com/noteflow/app/core/di/AppModule.kt
 - app/src/main/java/com/noteflow/app/core/navigation/AppNavigation.kt ← فيه TimerViewModel مشترك
 
+### UI Components (مشتركة)
+- app/src/main/java/com/noteflow/app/ui/components/ObsidianToolbar.kt ✅ محدّث — smart toggle + undo/redo + numbered list + code block + table + tag
+- app/src/main/java/com/noteflow/app/ui/components/MarkdownEngine.kt ✅ — MarkdownVisualTransformation + buildMarkdownAnnotated
+
 ### الرئيسية
-- app/src/main/java/com/noteflow/app/features/home/presentation/HomeScreen.kt ✅ مقسّمة + Zen Mode + Obsidian
+- app/src/main/java/com/noteflow/app/features/home/presentation/HomeScreen.kt ✅ مقسّمة + Zen Mode + Obsidian + SmartWrite
 
 ### الملاحظات
 - app/src/main/java/com/noteflow/app/features/notes/domain/model/Note.kt
@@ -129,7 +143,7 @@
 - app/src/main/java/com/noteflow/app/features/notes/domain/usecase/SaveNoteUseCase.kt
 - app/src/main/java/com/noteflow/app/features/notes/presentation/NoteViewModel.kt
 - app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteListScreen.kt
-- app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteDetailScreen.kt ✅ مقسّمة
+- app/src/main/java/com/noteflow/app/features/notes/presentation/screens/NoteDetailScreen.kt ✅ مقسّمة + ObsidianToolbar + ReadMode + Backlinks
 
 ### المهام
 - app/src/main/java/com/noteflow/app/features/tasks/domain/model/Task.kt
@@ -156,6 +170,10 @@
 ### البحث
 - app/src/main/java/com/noteflow/app/features/search/presentation/SearchScreen.kt ← ناقص بحث حقيقي
 
+### SmartWrite
+- app/src/main/java/com/noteflow/app/features/smartwrite/presentation/SmartWriteViewModel.kt ✅
+- (مدمج في HomeScreen)
+
 ## المراحل المكتملة
 ✅ المرحلة 0 — Build شغال
 ✅ المرحلة 1 — قاعدة البيانات
@@ -166,29 +184,21 @@
 ✅ المرحلة 5.5 — تقسيم كل الشاشات
 ✅ المرحلة 6 — HomeScreen (Zen Mode + Obsidian + Bottom Sheet)
 ✅ المرحلة 7 — TimerScreen كامل (جرس + وضع صارم + اختيار وقت + نبض)
+✅ المرحلة 8.5 — SmartWrite (AI تحليل النص + استخراج عنوان + tags + مهام)
+✅ المرحلة 9 — ObsidianToolbar محسّن (smart toggle + undo/redo + numbered + code block + table + tag)
 
 ## الناقص (الأولوية بالترتيب)
 1. 🔴 SearchScreen حقيقي — بحث في الملاحظات والمهام
-2. 🟠 NoteDetailScreen — Obsidian toolbar زي HomeScreen
-3. 🟡 الضوضاء البيضاء — ملفات صوت mp3 في res/raw (ناقص الملفات)
-4. 🟢 AI Integration بـ Groq
-5. 🟢 Graph View للملاحظات
-6. 🟢 Export PDF
-7. 🔵 مسح crash logger من NoteFlowApp قبل النشر
+2. 🟡 الضوضاء البيضاء — ملفات صوت mp3 في res/raw (ناقص الملفات)
+3. 🟢 AI Integration بـ Groq (موجود جزئياً في SmartWrite)
+4. 🟢 Graph View للملاحظات
+5. 🟢 Export PDF
+6. 🔵 مسح crash logger من NoteFlowApp قبل النشر
 
 ## الخطوة الجاية
-المرحلة 8: SearchScreen حقيقي
-- بحث في عنوان وmحتوى الملاحظات
-- بحث في المهام
-- نتائج فورية أثناء الكتابة
-- فلترة بالنوع (ملاحظات/مهام)
-
-## المرحلة 8.5 — Smart Write (مكتملة)
-- SmartWriteViewModel يستخدم AiRepository الموجود
-- HomeAiResultSheet في HomeScreen
-- زر ✨ يحلل النص الموجود في HomeQuickWrite
-- النتيجة: عنوان + tags + مهام مستخرجة + نص محسّن
-- الحفظ: كملاحظة أو كمهام
-
-## الخطوة الجاية
-المرحلة 8: SearchScreen حقيقي
+المرحلة 10: SearchScreen حقيقي
+- SearchViewModel — بحث في NoteDao + TaskDao
+- نتائج فورية مع debounce 300ms
+- فلترة: كل / ملاحظات / مهام
+- تظليل الكلمة المبحوثة في النتائج
+- الضغط على نتيجة → فتح الملاحظة أو المهمة
