@@ -45,6 +45,7 @@
 3. CompositingStrategy.Offscreen — API 31+ فقط
 4. Compose BOM 2024+ — لا تستخدم
 5. jvmTarget = "17" — بيعمل VerifyError
+6. DatePickerDefaults.colors — لا تستخدم navigationContentColor (مش موجود في BOM 2023.08.00)
 
 ## قواعد الكود العامة
 - ملف واحد في كل مرة
@@ -58,7 +59,7 @@
 ### Navigation
 - مفيش Bottom Navigation Bar
 - TimerViewModel بيتشارك على مستوى AppNavigation
-- Routes: home, notes, note/{noteId}, tasks, timer, stats, settings, search, ai, world, tags
+- Routes: home, notes, note/{noteId}, tasks, timer, stats, settings, search, ai, world, tags, goals
 
 ## المراحل المكتملة
 ✅ المرحلة 0 — Build شغال
@@ -74,83 +75,46 @@
 ✅ المرحلة 9 — ObsidianToolbar محسّن
 ✅ المرحلة 9.5 — Tags Integration (جزئي)
 ✅ المرحلة 10 — إصلاح TaskListScreen tag filter
+✅ المرحلة 11 — GoalsScreen من الصفر
 
-## Tags System — الوضع الحالي
+## Goals System — مكتمل ✅
+- Goal.kt — domain model
+- GoalEntity.kt — Room entity
+- GoalDao.kt — CRUD + Flow
+- GoalRepository interface + GoalRepositoryImpl
+- AppDatabase version=6 + migration goals table
+- AppModule — GoalDao + GoalRepository
+- GoalViewModel — allGoals, showAddDialog, editingGoal, saveGoal, updateProgress, toggleComplete, deleteGoal
+- GoalsScreen.kt — main screen
+- GoalsComponents.kt — GoalsHeader, GoalsTitle, GoalsSummaryRow, GoalCard, GoalsEmptyState, GoalsSectionLabel
+- GoalAddEditDialog.kt — مع DatePicker (بدون navigationContentColor)
+- GoalsUtils.kt — clickableNoRipple
+- AppNavigation — route "goals" مضاف
 
-### المكتمل ✅
+## Tags System — مكتمل ✅
 - Tag.kt, TagRepository.kt, TagExtractor.kt
 - TagEntity, NoteTagCrossRef, TaskTagCrossRef, GoalTagCrossRef
 - TagDao, AppDatabase migration 4→5
 - TagRepositoryImpl
-- TagViewModel, TagSuggestionDropdown, TagDashboardScreen
+- TagViewModel — allTags, suggestions, selectedTagId, taskIdsByTag
+- TagSuggestionDropdown, TagDashboardScreen
 - HomeScreen ← TagSuggestionDropdown في QuickWrite ✅
-- TaskListScreen ← TagFilterBar + فلترة صحيحة عن طريق tagViewModel.taskIdsByTag ✅
+- TaskListScreen ← TagFilterBar + فلترة عن طريق tagViewModel.taskIdsByTag ✅
 
-### TagViewModel — الوضع الحالي ✅
-- allTags: StateFlow<List<Tag>>
-- suggestions: StateFlow<List<Tag>>
-- selectedTagId: StateFlow<Long?>
-- taskIdsByTag: StateFlow<List<Long>> ← جديد، بيتحدث تلقائي لما selectedTagId يتغير
-- selectTag(tagId) ← بيحدث selectedTagId وبالتالي taskIdsByTag
-
-### TaskListScreen — الفلترة الحالية ✅
-- بتستخدم tagViewModel.selectedTagId و tagViewModel.taskIdsByTag
-- الفلترة: allActiveTasks.filter { task -> taskIdsByTag.contains(task.id) }
-- مفيش أي reference لـ task.tags (اللي كان بيعمل compile error)
-
-## Goals System — الوضع الحالي
-
-### الموجود ✅
-- GoalTagCrossRef.kt ← موجود في tags/data/local
-- goal_tag_cross_ref table ← موجودة في migration 4→5
-
-### الناقص ❌ — محتاج يتبنى من الصفر
-- Goal.kt (domain model)
-- GoalEntity.kt (Room entity)
-- GoalDao.kt
-- GoalRepository interface
-- GoalRepositoryImpl
-- GoalViewModel
-- GoalsScreen (مقسمة لملفات صغيرة)
-- AppDatabase migration 5→6 (إضافة جدول goals)
-- Route في Navigation
-
-### AppDatabase — الوضع الحالي
-- **version = 5**
-- entities: NoteEntity, TaskEntity, SessionEntity, AiChatEntity, TagEntity, NoteTagCrossRef, TaskTagCrossRef, GoalTagCrossRef
-- migration 5→6 محتاج يضيف: CREATE TABLE goals
-
-### Goal Model المقترح (على نفس pattern Task)
-- id: Long
-- title: String
-- description: String
-- isCompleted: Boolean
-- progress: Int (0-100)
-- targetDate: Long?
-- createdAt: Long
+## AppDatabase
+- **version = 6**
+- **fallbackToDestructiveMigration()** — عادي في مرحلة development
+- entities: NoteEntity, TaskEntity, SessionEntity, AiChatEntity, TagEntity, NoteTagCrossRef, TaskTagCrossRef, GoalTagCrossRef, GoalEntity
 
 ## الناقص (الأولوية بالترتيب)
-1. 🔴 GoalsScreen — من الصفر (الخطوة الجاية)
-2. 🟠 NoteDetailScreen ← tag suggestions + highlight
-3. 🟡 SearchScreen حقيقي
-4. 🟡 الضوضاء البيضاء — ملفات mp3
-5. 🟢 AI Integration بـ Groq
-6. 🟢 Graph View
-7. 🟢 Export PDF
-8. 🔵 مسح crash logger من NoteFlowApp
-
-## الخطوة الجاية — GoalsScreen من الصفر
-الترتيب:
-1. Goal.kt — domain model
-2. GoalEntity.kt — Room entity + toDomain/fromDomain
-3. GoalDao.kt — CRUD + Flow
-4. GoalRepository.kt — interface
-5. GoalRepositoryImpl.kt — implementation + Hilt
-6. AppDatabase.kt — version 6 + migration 5→6 (إضافة جدول goals) + goalDao()
-7. GoalViewModel.kt
-8. GoalsScreen.kt — مقسمة لـ Composables صغيرة
+1. 🟠 NoteDetailScreen ← tag suggestions + highlight
+2. 🟡 SearchScreen حقيقي
+3. 🟡 الضوضاء البيضاء — ملفات mp3
+4. 🟢 AI Integration بـ Groq
+5. 🟢 Graph View
+6. 🟢 Export PDF
+7. 🔵 مسح crash logger من NoteFlowApp
 
 ## آخر حاجة وصلنا ليها
-إصلاح TaskListScreen tag filter — اتعمل وعمل push ✅
-الـ build نجح ✅
-جاهزين نبدأ GoalsScreen من الصفر بداية من Goal.kt
+GoalsScreen اتعملت بالكامل وعمل build ✅
+الخطوة الجاية: NoteDetailScreen ← tag suggestions + highlight
