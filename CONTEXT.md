@@ -167,6 +167,17 @@
 ### الإعدادات
 - app/src/main/java/com/noteflow/app/features/settings/presentation/screens/SettingsScreen.kt ✅ مقسّمة
 
+### Tags
+- app/src/main/java/com/noteflow/app/features/tags/domain/model/Tag.kt ✅
+- app/src/main/java/com/noteflow/app/features/tags/domain/repository/TagRepository.kt ✅
+- app/src/main/java/com/noteflow/app/features/tags/domain/usecase/TagExtractor.kt ✅
+- app/src/main/java/com/noteflow/app/features/tags/data/local/TagEntity.kt ✅
+- app/src/main/java/com/noteflow/app/features/tags/data/local/TagDao.kt ✅
+- app/src/main/java/com/noteflow/app/features/tags/data/repository/TagRepositoryImpl.kt ✅
+- app/src/main/java/com/noteflow/app/features/tags/presentation/TagViewModel.kt ✅
+- app/src/main/java/com/noteflow/app/features/tags/presentation/TagSuggestionDropdown.kt ✅
+- app/src/main/java/com/noteflow/app/features/tags/presentation/TagDashboardScreen.kt ✅
+
 ### البحث
 - app/src/main/java/com/noteflow/app/features/search/presentation/SearchScreen.kt ← ناقص بحث حقيقي
 
@@ -189,6 +200,7 @@
 
 ## الناقص (الأولوية بالترتيب)
 1. 🔴 SearchScreen حقيقي — بحث في الملاحظات والمهام
+2. 🟠 Tags Integration — HomeScreen QuickWrite + TaskListScreen فلترة
 2. 🟡 الضوضاء البيضاء — ملفات صوت mp3 في res/raw (ناقص الملفات)
 3. 🟢 AI Integration بـ Groq (موجود جزئياً في SmartWrite)
 4. 🟢 Graph View للملاحظات
@@ -196,6 +208,11 @@
 6. 🔵 مسح crash logger من NoteFlowApp قبل النشر
 
 ## الخطوة الجاية
+المرحلة 9.5: Tags Integration
+- HomeScreen ← TagSuggestionDropdown في QuickWrite
+- TaskListScreen ← فلترة بالتاج
+
+## الخطوة بعدها
 المرحلة 10: SearchScreen حقيقي
 - SearchViewModel — بحث في NoteDao + TaskDao
 - نتائج فورية مع debounce 300ms
