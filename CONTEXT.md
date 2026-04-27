@@ -73,6 +73,7 @@
 ✅ المرحلة 8.5 — SmartWrite
 ✅ المرحلة 9 — ObsidianToolbar محسّن
 ✅ المرحلة 9.5 — Tags Integration (جزئي)
+✅ المرحلة 10 — إصلاح TaskListScreen tag filter
 
 ## Tags System — الوضع الحالي
 
@@ -83,38 +84,73 @@
 - TagRepositoryImpl
 - TagViewModel, TagSuggestionDropdown, TagDashboardScreen
 - HomeScreen ← TagSuggestionDropdown في QuickWrite ✅
-- TaskListScreen ← TagFilterBar مضافة ✅ (بس فيها مشكلة)
+- TaskListScreen ← TagFilterBar + فلترة صحيحة عن طريق tagViewModel.taskIdsByTag ✅
 
-### المشكلة الحالية ⚠️
-TaskListScreen فيها filter بيعمل:
-task.tags.contains(selectedTagId.toString())
-لكن Task model مفيش فيه tags field خالص!
-محتاج نصلح الفلترة عن طريق TagRepository مش Task model
+### TagViewModel — الوضع الحالي ✅
+- allTags: StateFlow<List<Tag>>
+- suggestions: StateFlow<List<Tag>>
+- selectedTagId: StateFlow<Long?>
+- taskIdsByTag: StateFlow<List<Long>> ← جديد، بيتحدث تلقائي لما selectedTagId يتغير
+- selectTag(tagId) ← بيحدث selectedTagId وبالتالي taskIdsByTag
 
-### الحل المطلوب
-- استخدام خيار 2: جيب المهام المرتبطة بتاج من TagRepository
-- TagDao فيه getTasksByTag أو TaskTagCrossRef
-- TaskListScreen تستخدم tagViewModel.getTaskIdsByTag(tagId)
+### TaskListScreen — الفلترة الحالية ✅
+- بتستخدم tagViewModel.selectedTagId و tagViewModel.taskIdsByTag
+- الفلترة: allActiveTasks.filter { task -> taskIdsByTag.contains(task.id) }
+- مفيش أي reference لـ task.tags (اللي كان بيعمل compile error)
 
-### الناقص في Tags Integration
-- TaskListScreen filter — إصلاح المشكلة ⚠️
-- NoteDetailScreen ← suggestions + highlight
-- GoalsScreen ← مفيش ملف خالص، محتاج يتعمل من الصفر
+## Goals System — الوضع الحالي
+
+### الموجود ✅
+- GoalTagCrossRef.kt ← موجود في tags/data/local
+- goal_tag_cross_ref table ← موجودة في migration 4→5
+
+### الناقص ❌ — محتاج يتبنى من الصفر
+- Goal.kt (domain model)
+- GoalEntity.kt (Room entity)
+- GoalDao.kt
+- GoalRepository interface
+- GoalRepositoryImpl
+- GoalViewModel
+- GoalsScreen (مقسمة لملفات صغيرة)
+- AppDatabase migration 5→6 (إضافة جدول goals)
+- Route في Navigation
+
+### AppDatabase — الوضع الحالي
+- **version = 5**
+- entities: NoteEntity, TaskEntity, SessionEntity, AiChatEntity, TagEntity, NoteTagCrossRef, TaskTagCrossRef, GoalTagCrossRef
+- migration 5→6 محتاج يضيف: CREATE TABLE goals
+
+### Goal Model المقترح (على نفس pattern Task)
+- id: Long
+- title: String
+- description: String
+- isCompleted: Boolean
+- progress: Int (0-100)
+- targetDate: Long?
+- createdAt: Long
 
 ## الناقص (الأولوية بالترتيب)
-1. 🔴 إصلاح TaskListScreen tag filter
-2. 🔴 GoalsScreen — من الصفر
-3. 🟠 NoteDetailScreen ← tag suggestions + highlight
-4. 🟡 SearchScreen حقيقي
-5. 🟡 الضوضاء البيضاء — ملفات mp3
-6. 🟢 AI Integration بـ Groq
-7. 🟢 Graph View
-8. 🟢 Export PDF
-9. 🔵 مسح crash logger من NoteFlowApp
+1. 🔴 GoalsScreen — من الصفر (الخطوة الجاية)
+2. 🟠 NoteDetailScreen ← tag suggestions + highlight
+3. 🟡 SearchScreen حقيقي
+4. 🟡 الضوضاء البيضاء — ملفات mp3
+5. 🟢 AI Integration بـ Groq
+6. 🟢 Graph View
+7. 🟢 Export PDF
+8. 🔵 مسح crash logger من NoteFlowApp
 
-## الخطوة الجاية
-إصلاح TaskListScreen tag filter:
-1. شوف TagDao — هل فيه getTaskIdsByTag؟
-2. لو موجود → استخدمه في TagViewModel
-3. لو مش موجود → نضيفه في TagDao
-4. نعدّل TaskListScreen تستخدم tagViewModel بشكل صح
+## الخطوة الجاية — GoalsScreen من الصفر
+الترتيب:
+1. Goal.kt — domain model
+2. GoalEntity.kt — Room entity + toDomain/fromDomain
+3. GoalDao.kt — CRUD + Flow
+4. GoalRepository.kt — interface
+5. GoalRepositoryImpl.kt — implementation + Hilt
+6. AppDatabase.kt — version 6 + migration 5→6 (إضافة جدول goals) + goalDao()
+7. GoalViewModel.kt
+8. GoalsScreen.kt — مقسمة لـ Composables صغيرة
+
+## آخر حاجة وصلنا ليها
+إصلاح TaskListScreen tag filter — اتعمل وعمل push ✅
+الـ build نجح ✅
+جاهزين نبدأ GoalsScreen من الصفر بداية من Goal.kt
