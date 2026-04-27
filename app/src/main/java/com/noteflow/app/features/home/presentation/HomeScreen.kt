@@ -53,6 +53,9 @@ import com.noteflow.app.features.notes.presentation.NoteViewModel
 import com.noteflow.app.features.tasks.domain.model.Task
 import com.noteflow.app.features.tasks.presentation.TaskViewModel
 import com.noteflow.app.features.timer.presentation.TimerViewModel
+import com.noteflow.app.features.smartwrite.presentation.SmartWriteViewModel
+import com.noteflow.app.features.smartwrite.presentation.SmartWriteState
+import com.noteflow.app.features.smartwrite.presentation.SmartWriteResult
 import java.util.Calendar
 
 private val BgColor = Color(0xFF131313)
@@ -85,12 +88,15 @@ fun HomeScreen(
     onNavigateToWorld: () -> Unit = {},
     noteViewModel: NoteViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel(),
-    taskViewModel: TaskViewModel = hiltViewModel()
+    taskViewModel: TaskViewModel = hiltViewModel(),
+    smartWriteViewModel: SmartWriteViewModel = hiltViewModel()
 ) {
     val tasks by taskViewModel.tasks.collectAsState()
     val timeLeft by timerViewModel.timeLeft.collectAsState()
     val isRunning by timerViewModel.isRunning.collectAsState()
     val isWorkSession by timerViewModel.isWorkSession.collectAsState()
+    val smartWriteState by smartWriteViewModel.state.collectAsState()
+    var showAiSheet by remember { mutableStateOf(false) }
     var noteTitle by remember { mutableStateOf("") }
     var noteContent by remember { mutableStateOf(TextFieldValue("")) }
     var showLeftDrawer by remember { mutableStateOf(false) }
@@ -224,12 +230,28 @@ fun HomeScreen(
                             onShowAddSheet = { showAddSheet = true },
                             onNavigateToTasks = { tasksFullScreen = true },
                             onNavigateToSearch = onNavigateToSearch,
-                            onNavigateToAi = onNavigateToAi,
+                            onNavigateToAi = {
+                            if (noteContent.text.isNotBlank() || noteTitle.isNotBlank()) {
+                                showAiSheet = true
+                                smartWriteViewModel.analyze(noteTitle, noteContent.text)
+                            } else {
+                                onNavigateToAi()
+                            }
+                        },
                             onNavigateToSettings = onNavigateToSettings
                         )
                     }
                 }
             }
+        }
+
+        if (showAiSheet) {
+            HomeAiResultSheet(
+                state = smartWriteState,
+                onSaveNote = { smartWriteViewModel.saveAsNote((smartWriteState as? SmartWriteState.Result)?.result ?: return@HomeAiResultSheet) },
+                onSaveTasks = { smartWriteViewModel.saveTasks((smartWriteState as? SmartWriteState.Result)?.result ?: return@HomeAiResultSheet) },
+                onDismiss = { showAiSheet = false; smartWriteViewModel.reset() }
+            )
         }
 
         if (showAddSheet) {
@@ -645,5 +667,275 @@ private fun DrawerItem(icon: ImageVector, label: String, tint: Color = OnSurface
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
         Text(label, color = if (tint == OnSurfaceVariant) OnSurface else tint, fontSize = 15.sp)
+    }
+}
+
+// ─── AI Result Sheet ───────────────────────────────────────────────────────────
+
+@Composable
+fun HomeAiResultSheet(
+    state: SmartWriteState,
+    onSaveNote: () -> Unit,
+    onSaveTasks: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f))
+            .clickable { onDismiss() }
+    )
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .background(Color(0xFF1C1B1B))
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier.width(40.dp).height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(0xFF47464C))
+                    .align(Alignment.CenterHorizontally)
+            )
+
+            when (state) {
+                is SmartWriteState.Analyzing -> {
+                    AiAnalyzingIndicator()
+                }
+                is SmartWriteState.Result -> {
+                    AiResultContent(
+                        result = state.result,
+                        onSaveNote = onSaveNote,
+                        onSaveTasks = onSaveTasks,
+                        onDismiss = onDismiss
+                    )
+                }
+                is SmartWriteState.Saved -> {
+                    AiSavedBanner(message = state.message, onDismiss = onDismiss)
+                }
+                else -> {}
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun AiAnalyzingIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+        label = "alpha"
+    )
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("✨", fontSize = 36.sp,
+            modifier = Modifier.graphicsLayer(alpha = alpha))
+        Text("الذكاء الاصطناعي يحلل نصك...",
+            fontSize = 14.sp, color = Color(0xFFCABEFF),
+            fontWeight = FontWeight.Bold)
+        Text("لحظة واحدة",
+            fontSize = 12.sp, color = Color(0xFF6B6B6B))
+    }
+}
+
+@Composable
+private fun AiResultContent(
+    result: SmartWriteResult,
+    onSaveNote: () -> Unit,
+    onSaveTasks: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(result.contentType.emoji, fontSize = 20.sp)
+                Text(result.contentType.label,
+                    fontSize = 11.sp, color = Color(0xFF8A70FF),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF8A70FF).copy(alpha = 0.15f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp))
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, contentDescription = null,
+                    tint = Color(0xFF6B6B6B), modifier = Modifier.size(18.dp))
+            }
+        }
+
+        Text(result.title,
+            fontSize = 20.sp, fontWeight = FontWeight.Bold,
+            color = Color(0xFFE5E2E1))
+
+        if (result.tags.isNotEmpty()) {
+            AiTagsRow(tags = result.tags)
+        }
+
+        if (result.refinedText != result.originalText) {
+            AiRefinedText(text = result.refinedText)
+        }
+
+        if (result.extractedTasks.isNotEmpty()) {
+            AiTasksList(tasks = result.extractedTasks)
+        }
+
+        if (result.suggestions.isNotEmpty()) {
+            Text(result.suggestions.first(),
+                fontSize = 12.sp, color = Color(0xFF75D1FF),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF75D1FF).copy(alpha = 0.08f))
+                    .padding(12.dp))
+        }
+
+        AiActionButtons(
+            hasExtractedTasks = result.extractedTasks.isNotEmpty(),
+            onSaveNote = onSaveNote,
+            onSaveTasks = onSaveTasks
+        )
+    }
+}
+
+@Composable
+private fun AiTagsRow(tags: List<String>) {
+    androidx.compose.foundation.lazy.LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        items(tags) { tag ->
+            Text(
+                "#$tag",
+                fontSize = 11.sp,
+                color = Color(0xFFCABEFF),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFFCABEFF).copy(alpha = 0.1f))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AiRefinedText(text: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF2A2A2A))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text("النص المحسّن",
+            fontSize = 10.sp, letterSpacing = 1.sp,
+            color = Color(0xFF6B6B6B), fontWeight = FontWeight.Bold)
+        Text(text,
+            fontSize = 13.sp, color = Color(0xFFC8C5CD),
+            lineHeight = 22.sp)
+    }
+}
+
+@Composable
+private fun AiTasksList(tasks: List<String>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF2A2A2A))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text("المهام المستخرجة",
+            fontSize = 10.sp, letterSpacing = 1.sp,
+            color = Color(0xFF6B6B6B), fontWeight = FontWeight.Bold)
+        tasks.forEach { task ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.size(6.dp).clip(CircleShape)
+                        .background(Color(0xFF8A70FF))
+                )
+                Text(task, fontSize = 13.sp, color = Color(0xFFC8C5CD))
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiActionButtons(
+    hasExtractedTasks: Boolean,
+    onSaveNote: () -> Unit,
+    onSaveTasks: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFFCABEFF), Color(0xFF8A70FF))))
+                .clickable { onSaveNote() }
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Save, contentDescription = null,
+                tint = Color(0xFF131313), modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("احفظ كملاحظة",
+                fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                color = Color(0xFF131313))
+        }
+
+        if (hasExtractedTasks) {
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF2A2A2A))
+                    .clickable { onSaveTasks() }
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null,
+                    tint = Color(0xFF8A70FF), modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("اضف كمهام",
+                    fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                    color = Color(0xFFCABEFF))
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiSavedBanner(message: String, onDismiss: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("✅", fontSize = 36.sp)
+        Text(message, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+            color = Color(0xFFCABEFF))
+        LaunchedEffect(Unit) {
+            kotlinx.coroutines.delay(1500)
+            onDismiss()
+        }
     }
 }
