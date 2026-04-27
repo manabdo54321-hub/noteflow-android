@@ -1,8 +1,6 @@
 package com.noteflow.app.features.goals.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
@@ -15,7 +13,6 @@ import androidx.compose.ui.unit.sp
 import com.noteflow.app.features.goals.domain.model.Goal
 
 private val SurfaceColor = Color(0xFF1C1B1B)
-private val SurfaceHigh = Color(0xFF2A2A2A)
 private val PrimaryColor = Color(0xFFCABEFF)
 private val AccentColor = Color(0xFF8A70FF)
 private val OnSurfaceVariant = Color(0xFFC8C5CD)
@@ -162,7 +159,6 @@ fun GoalDatePickerDialog(
                 headlineContentColor = PrimaryColor,
                 weekdayContentColor = OnSurfaceVariant,
                 subheadContentColor = OnSurfaceVariant,
-                navigationContentColor = Color.White,
                 yearContentColor = Color.White,
                 currentYearContentColor = PrimaryColor,
                 selectedYearContentColor = Color(0xFF1C0062),
