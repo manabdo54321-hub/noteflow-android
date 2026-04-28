@@ -327,47 +327,6 @@ private fun AddSheetItem(icon: ImageVector, title: String, subtitle: String, col
 }
 
 @Composable
-private fun ObsidianToolbar(noteContent: TextFieldValue, onContentChange: (TextFieldValue) -> Unit) {
-    val symbols = listOf("# ", "## ", "### ", "**text**", "*text*", "- ", "> ", "[[]]", "`code`", "---\n", "- [ ] ", "@")
-    val labels = listOf("H1", "H2", "H3", "B", "I", "•", "❝", "[[", "<>", "—", "☐", "@")
-
-    Row(
-        modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1A1A)).padding(horizontal = 8.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        symbols.forEachIndexed { index, symbol ->
-            Box(
-                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(SurfaceHigh)
-                    .clickable {
-                        val cursor = noteContent.selection.end
-                        val text = noteContent.text
-                        val insertion = when (symbol) {
-                            "**text**" -> "****"
-                            "*text*" -> "**"
-                            "`code`" -> "``"
-                            else -> symbol
-                        }
-                        val newText = text.substring(0, cursor) + insertion + text.substring(cursor)
-                        val newCursor = when (symbol) {
-                            "**text**" -> cursor + 2
-                            "*text*" -> cursor + 1
-                            "`code`" -> cursor + 1
-                            "[[]]" -> cursor + 2
-                            else -> cursor + insertion.length
-                        }
-                        onContentChange(TextFieldValue(newText, TextRange(newCursor)))
-                    }
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(labels[index], fontSize = 11.sp, color = PrimaryColor, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
 private fun HomeWritingMiniBar(tasks: List<Task>, timeLeft: Long, isRunning: Boolean, onStop: () -> Unit) {
     val activeTasks = tasks.filter { !it.isCompleted }
     val timerMinutes = (timeLeft / 1000) / 60
