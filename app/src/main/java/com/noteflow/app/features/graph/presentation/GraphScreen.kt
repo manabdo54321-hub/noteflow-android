@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -35,19 +34,19 @@ fun GraphScreen(
     onBack: () -> Unit,
     viewModel: GraphViewModel = hiltViewModel()
 ) {
-    val nodes      by viewModel.nodes.collectAsState()
-    val edges      by viewModel.edges.collectAsState()
-    val graphState by viewModel.graphState.collectAsState()
-    val scope      = rememberCoroutineScope()
+    val nodes        by viewModel.nodes.collectAsState()
+    val edges        by viewModel.edges.collectAsState()
+    val graphState   by viewModel.graphState.collectAsState()
+    val scope        = rememberCoroutineScope()
     val textMeasurer = rememberTextMeasurer()
 
-    var zoom    by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
-    var canvasW by remember { mutableStateOf(0f) }
-    var canvasH by remember { mutableStateOf(0f) }
+    var zoom         by remember { mutableStateOf(1f) }
+    var offsetX      by remember { mutableStateOf(0f) }
+    var offsetY      by remember { mutableStateOf(0f) }
+    var canvasW      by remember { mutableStateOf(0f) }
+    var canvasH      by remember { mutableStateOf(0f) }
     var selectedNode by remember { mutableStateOf<com.noteflow.app.features.graph.domain.GraphNode?>(null) }
-    val settings = remember { GraphSettings() }
+    val settings     = remember { GraphSettings() }
 
     val connectionCounts = remember(edges) {
         val map = mutableMapOf<String, Int>()
@@ -58,7 +57,7 @@ fun GraphScreen(
         map
     }
 
-    LaunchedEffect(canvasW, canvasH, nodes.isEmpty()) {
+    LaunchedEffect(canvasW, canvasH) {
         if (canvasW > 0f && canvasH > 0f) {
             scope.launch {
                 while (true) {
@@ -97,7 +96,9 @@ fun GraphScreen(
                             val hit = nodes.firstOrNull { node ->
                                 val dx = node.x - worldX
                                 val dy = node.y - worldY
-                                val r  = (20f + kotlin.math.ln((connectionCounts[node.id] ?: 0).toDouble() + 1).toFloat() * 8f).coerceIn(20f, 60f)
+                                val r = (20f + kotlin.math.ln(
+                                    ((connectionCounts[node.id] ?: 0) + 1).toDouble()
+                                ).toFloat() * 8f).coerceIn(20f, 60f)
                                 kotlin.math.sqrt((dx * dx + dy * dy).toDouble()) < r
                             }
                             selectedNode = hit
@@ -109,7 +110,9 @@ fun GraphScreen(
                             val hit = nodes.firstOrNull { node ->
                                 val dx = node.x - worldX
                                 val dy = node.y - worldY
-                                val r  = (20f + kotlin.math.ln((connectionCounts[node.id] ?: 0).toDouble() + 1).toFloat() * 8f).coerceIn(20f, 60f)
+                                val r = (20f + kotlin.math.ln(
+                                    ((connectionCounts[node.id] ?: 0) + 1).toDouble()
+                                ).toFloat() * 8f).coerceIn(20f, 60f)
                                 kotlin.math.sqrt((dx * dx + dy * dy).toDouble()) < r
                             }
                             if (hit != null) {
@@ -130,8 +133,12 @@ fun GraphScreen(
         ) {
             canvasW = size.width
             canvasH = size.height
-            val renderEdges = buildRenderEdges(edges, nodes, graphState.focusedNodeId, settings.edgeMode)
-            val renderNodes = buildRenderNodes(nodes, graphState.focusedNodeId, connectionCounts)
+            val renderEdges = buildRenderEdges(
+                edges, nodes, graphState.focusedNodeId, settings.edgeMode
+            )
+            val renderNodes = buildRenderNodes(
+                nodes, graphState.focusedNodeId, connectionCounts
+            )
             drawGraph(renderNodes, renderEdges, settings, textMeasurer)
         }
 
@@ -175,7 +182,12 @@ fun GraphScreen(
             IconButton(onClick = { zoom = (zoom * 1.2f).coerceAtMost(3f) }) {
                 Text("+", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), thickness = 1.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color.White.copy(alpha = 0.1f))
+            )
             IconButton(onClick = { zoom = (zoom / 1.2f).coerceAtLeast(0.3f) }) {
                 Text("-", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
@@ -186,7 +198,8 @@ fun GraphScreen(
             onClick = { zoom = 1f; offsetX = 0f; offsetY = 0f },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 12.dp).padding(bottom = 80.dp)
+                .padding(end = 12.dp)
+                .offset(y = (-80).dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(SurfaceColor.copy(alpha = 0.9f))
                 .size(44.dp)
@@ -199,7 +212,8 @@ fun GraphScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, bottom = 16.dp)
+                .padding(horizontal = 16.dp)
+                .offset(y = (-16).dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(SurfaceColor.copy(alpha = 0.95f))
                 .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -224,25 +238,32 @@ fun GraphScreen(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(horizontal = 16.dp, bottom = 70.dp)
+                    .padding(horizontal = 16.dp)
+                    .offset(y = (-70).dp)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
                     .background(SurfaceColor)
                     .padding(16.dp)
             ) {
                 Column {
-                    Text(node.label, color = PrimaryColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        node.label,
+                        color = PrimaryColor,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        node.type.name + " • " + (connectionCounts[node.id] ?: 0) + " روابط",
+                        node.type.name + " - " + (connectionCounts[node.id] ?: 0) + " روابط",
                         color = Color.White.copy(alpha = 0.5f),
                         fontSize = 11.sp
                     )
                     Spacer(Modifier.height(8.dp))
-                    Row {
-                        TextButton(onClick = { selectedNode = null; viewModel.setFocusedNode(null) }) {
-                            Text("اغلاق", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-                        }
+                    TextButton(onClick = {
+                        selectedNode = null
+                        viewModel.setFocusedNode(null)
+                    }) {
+                        Text("اغلاق", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
                     }
                 }
             }
