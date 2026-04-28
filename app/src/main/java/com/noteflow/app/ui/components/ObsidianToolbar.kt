@@ -8,8 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,10 +33,9 @@ fun ObsidianToolbar(
     onValueChange: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // ─── نحفظ الـ selection هنا عشان ما يتمسحش لما نضغط الزر
     var savedValue by remember { mutableStateOf(value) }
+    var showHeadingMenu by remember { mutableStateOf(false) }
 
-    // نحدّث الـ savedValue كل ما يتغير النص أو الـ selection
     LaunchedEffect(value.selection, value.text) {
         savedValue = value
     }
@@ -76,10 +74,41 @@ fun ObsidianToolbar(
         }
         TDiv()
 
-        // ── Headings ─────────────────────────────────────────
-        TBtn("H1") { act(tfLinePrefix(savedValue, "# ")) }
-        TBtn("H2") { act(tfLinePrefix(savedValue, "## ")) }
-        TBtn("H3") { act(tfLinePrefix(savedValue, "### ")) }
+        // ── Headings Dropdown ────────────────────────────────
+        Box {
+            TBtn("H", tint = if (showHeadingMenu) Color(0xFFCABEFF) else PrimaryColor) {
+                showHeadingMenu = true
+            }
+            DropdownMenu(
+                expanded = showHeadingMenu,
+                onDismissRequest = { showHeadingMenu = false },
+                modifier = Modifier.background(Color(0xFF2A2A2A))
+            ) {
+                listOf(
+                    "H1" to Pair("# ",  20.sp),
+                    "H2" to Pair("## ", 17.sp),
+                    "H3" to Pair("### ", 15.sp),
+                    "H4" to Pair("#### ", 13.sp),
+                    "H5" to Pair("##### ", 12.sp),
+                    "H6" to Pair("###### ", 11.sp)
+                ).forEach { (label, data) ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                label,
+                                color = PrimaryColor,
+                                fontSize = data.second,
+                                fontWeight = FontWeight.Bold
+                            )
+                        },
+                        onClick = {
+                            act(tfLinePrefix(savedValue, data.first))
+                            showHeadingMenu = false
+                        }
+                    )
+                }
+            }
+        }
         TDiv()
 
         // ── Inline styles ────────────────────────────────────
