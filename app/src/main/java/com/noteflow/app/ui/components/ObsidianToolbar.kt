@@ -145,7 +145,7 @@ private fun TBtn(
             .clip(RoundedCornerShape(6.dp))
             .background(SurfaceHigh)
             .clickable {
-                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 onClick()
             }
             .padding(horizontal = 10.dp, vertical = 7.dp),
