@@ -76,56 +76,67 @@
 ✅ المرحلة 9.5 — Tags Integration (جزئي)
 ✅ المرحلة 10 — إصلاح TaskListScreen tag filter
 ✅ المرحلة 11 — GoalsScreen من الصفر
+✅ المرحلة 12 — Obsidian Toolbar المرحلة 4 (Callouts + Advanced)
 
-## Obsidian Toolbar System — مكتمل جزئياً
+## Obsidian Toolbar System — مكتمل ✅
 
-### الملفات
-- ObsidianTextEngine.kt ✅ — كل الـ text logic
-- ObsidianToolbar.kt ✅ — الـ UI + selection fix
-- MarkdownEngine.kt ✅ — Visual Transformation
-
-### إصلاحات مهمة تمت
-- KEYBOARD_TAP crash → استبدل بـ VIRTUAL_KEY ✅
-- حذف ObsidianToolbar القديم من HomeScreen ✅
-- Selection fix بـ savedValue + LaunchedEffect ✅
-- MarkdownEngine H1-H6 + inline styles + tags + checkboxes ✅
-- MarkdownVisualTransformation.kt — محذوف (كان متعارض)
-- MarkdownInlineStyles.kt — محذوف (كان متعارض)
+### المسارات الصحيحة للملفات
+- ui/components/ObsidianTextEngine.kt
+- ui/components/ObsidianToolbar.kt
+- ui/components/MarkdownEngine.kt
 
 ### أزرار الـ Toolbar الحالية ✅
+- Undo / Redo
+- H1→H6 Dropdown (زرار واحد يفتح قائمة)
 - Bold → **text**
 - Italic → *text*
-- Heading H1/H2/H3 → # / ## / ###
+- Strikethrough → ~~text~~
+- Highlight → ==text==
+- Inline Code → `text`
 - Bullet List → -
 - Numbered List → 1.
 - Checkbox → - [ ]
-- Code inline → `text`
+- Blockquote → >
 - Code Block → ```
-- Quote → >
-- Wiki Link → [[text]]
-- Highlight → ==text==
-- Strikethrough → ~~text~~
 - Table → | col |
+- Horizontal Rule → ---
+- Callout → > [!INFO]
+- Wiki Link → [[text]]
+- Embed → ![[]]
+- External Link → []()
 - Tag → #
-- Undo/Redo ✅
-- Indent/Unindent ✅
+- Indent / Unindent
 
-### ناقص في الـ Toolbar
-- H4/H5/H6 أزرار (موجودة في Engine بس مش في الـ UI)
-- External Link → [نص](رابط)
-- Embed → ![[ملاحظة]]
-- Callouts → > [!INFO]
+### MarkdownEngine — Rendering مكتمل ✅
+- H1→H6 بأحجام مختلفة
+- Bold, Italic, Strikethrough, Highlight
+- Inline Code, Code Block
+- Blockquote عادي
+- Horizontal Rule ─────
+- Checkboxes ✅ / ☐
+- Bullet List, Numbered List
+- Callouts بألوان: INFO(أزرق) WARNING(برتقالي) TIP(أخضر) DANGER(أحمر) QUESTION(بنفسجي) NOTE(أزرق)
+- Wiki Link [[]] بلون بنفسجي + underline
+- Embed ![[]] بلون تركواز + underline
+- External Link [نص](رابط) بلون أزرق + underline
+- Tags #tag بلون بنفسجي
+- Hidden Comment %% — بيختفي في الـ rendering
 
-### مراحل Obsidian Toolbar
-✅ المرحلة 1 — إصلاح الـ Selection
-✅ المرحلة 2 — Toolbar أزرار (جزئي — ناقص H4-H6 + External Link + Embed)
-✅ المرحلة 3 — Preview Mode (MarkdownEngine)
-🟠 المرحلة 4 — Callouts + Advanced
-
-### مؤجل (مش أولوية)
+### الناقص في Obsidian (مؤجل — مش أولوية)
+- Footnote [^1]
+- Alias Link [[ملف|اسم]]
+- Block Link [[ملف#^id]]
+- LaTeX $E=mc^2$ — محتاج WebView
+- Mermaid Charts — محتاج WebView
 - Canvas — محتاج library ضخمة
-- LaTeX / Mermaid — محتاج WebView
 - Properties/YAML — مش أولوية
+- H4/H5/H6 أزرار منفصلة (موجودة في Dropdown)
+- Callouts إضافية: SUCCESS, BUG, EXAMPLE, QUOTE
+
+### أخطاء حدثت وتم حلها
+- MarkdownEngine.kt اتمسح بسبب nano — تم إعادة كتابته بـ cat
+- UnicodeEncodeError في Python بسبب emoji — تم استبداله بنص عادي
+- grep bash error مع ![[  — بسبب bash history expansion
 
 ## Goals System — مكتمل ✅
 - Goal.kt — domain model
@@ -134,11 +145,11 @@
 - GoalRepository interface + GoalRepositoryImpl
 - AppDatabase version=6 + migration goals table
 - AppModule — GoalDao + GoalRepository
-- GoalViewModel — allGoals, showAddDialog, editingGoal, saveGoal, updateProgress, toggleComplete, deleteGoal
-- GoalsScreen.kt — main screen
-- GoalsComponents.kt — GoalsHeader, GoalsTitle, GoalsSummaryRow, GoalCard, GoalsEmptyState, GoalsSectionLabel
-- GoalAddEditDialog.kt — مع DatePicker (بدون navigationContentColor)
-- GoalsUtils.kt — clickableNoRipple
+- GoalViewModel
+- GoalsScreen.kt
+- GoalsComponents.kt
+- GoalAddEditDialog.kt
+- GoalsUtils.kt
 - AppNavigation — route "goals" مضاف
 
 ## Tags System — مكتمل ✅
@@ -157,26 +168,30 @@
 - entities: NoteEntity, TaskEntity, SessionEntity, AiChatEntity, TagEntity, NoteTagCrossRef, TaskTagCrossRef, GoalTagCrossRef, GoalEntity
 
 ## الناقص (الأولوية بالترتيب)
-1. 🟠 المرحلة 4 Obsidian — Callouts + Advanced (H4-H6 + External Link + Embed)
-2. 🟠 NoteDetailScreen ← tag suggestions + highlight
-3. 🟡 SearchScreen حقيقي
-4. 🟡 الضوضاء البيضاء — ملفات mp3
-5. 🟢 AI Integration بـ Groq
-6. 🟢 Graph View
-7. 🟢 Export PDF
-8. 🔵 مسح crash logger من NoteFlowApp
+1. 🟠 NoteDetailScreen ← tag suggestions + highlighting
+2. 🟡 Footnote [^1] في MarkdownEngine
+3. 🟡 Alias Link [[ملف|اسم]] في MarkdownEngine
+4. 🟡 SearchScreen حقيقي
+5. 🟡 الضوضاء البيضاء — ملفات mp3
+6. 🟢 AI Integration بـ Groq
+7. 🟢 Graph View
+8. 🟢 Export PDF
+9. 🔵 مسح crash logger من NoteFlowApp
 
 ## آخر حاجة وصلنا ليها
-- MarkdownEngine H1-H6 + Tags coloring ✅
+- المرحلة 12 خلصت ✅
+- Obsidian Toolbar كامل مع Callouts + External Link + Embed + Hidden Comment
 - Build نجح ✅
-- الخطوة الجاية: المرحلة 4 Obsidian — Callouts + Advanced
+- الخطوة الجاية: NoteDetailScreen ← tag suggestions + highlighting
 
 ## قواعد العمل من Termux
 - الملفات بتتكتب بـ cat > file << 'EOF'
-- التعديلات الصغيرة (سطرين/ثلاثة) → nano مباشرة
-- nano 9.0 مثبت ✅
+- التعديلات الصغيرة → python3 heredoc
+- nano 9.0 مثبت ✅ لكن خطر على ملفات كبيرة (ممكن يمسح المحتوى)
 - كل ملف 100-150 سطر max
 - لا تستخدم printf مع نصوص عربية
+- لا تستخدم emoji في python heredoc — بيعمل UnicodeEncodeError
+- grep مع ! بيعمل bash history error — استخدم grep -n "%%" بدل grep -n "!\[\["
 - الرفع دايماً: git add -A && git commit -m "..." && git push
 - GitHub Actions هو اللي يبني — مش Termux
 - لو فشل البناء: اقرأ السطر الأول من الخطأ بس
@@ -192,3 +207,7 @@
 - الخطة المعتمدة هي NoteFlow_Guide_v2
 - مسار الملفات الجديدة للـ Goals:
   features/goals/presentation/GoalsUtils.kt (مش utils/)
+- مسار ملفات الـ Obsidian:
+  ui/components/ObsidianToolbar.kt
+  ui/components/ObsidianTextEngine.kt
+  ui/components/MarkdownEngine.kt
