@@ -113,6 +113,15 @@ class GraphViewModel @Inject constructor(
         _graphState.value = _graphState.value.copy(currentMode = mode)
     }
 
+    fun tickPhysics(width: Float, height: Float) {
+        val current = _nodes.value
+        if (current.isEmpty()) return
+        val initialized = if (current.first().x == 0f) {
+            GraphEngine.initPositions(current, width, height)
+        } else current
+        _nodes.value = GraphEngine.step(initialized, _edges.value)
+    }
+
     fun setFocusedNode(nodeId: String?) {
         _graphState.value = _graphState.value.copy(focusedNodeId = nodeId)
     }
