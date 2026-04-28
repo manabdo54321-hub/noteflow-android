@@ -12,6 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.noteflow.app.features.home.presentation.HomeScreen
+import com.noteflow.app.features.graph.presentation.GraphScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteDetailScreen
 import com.noteflow.app.features.notes.presentation.screens.NoteListScreen
 import com.noteflow.app.features.search.presentation.SearchScreen
@@ -102,6 +103,9 @@ fun AppNavigation(
             }
             composable("world") {
                 WorldScreen(onBack = { navController.popBackStack() })
+            }
+            composable("graph") {
+                GraphScreen(onBack = { navController.popBackStack() })
             }
             composable("goals") {
                 GoalsScreen()

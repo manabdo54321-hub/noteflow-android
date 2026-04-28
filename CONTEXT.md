@@ -168,7 +168,7 @@
 - entities: NoteEntity, TaskEntity, SessionEntity, AiChatEntity, TagEntity, NoteTagCrossRef, TaskTagCrossRef, GoalTagCrossRef, GoalEntity
 
 ## الناقص (الأولوية بالترتيب)
-1. 🟠 NoteDetailScreen ← tag suggestions + highlighting
+1. ✅ NoteDetailScreen ← tag suggestions + highlighting
 2. 🟡 Footnote [^1] في MarkdownEngine
 3. 🟡 Alias Link [[ملف|اسم]] في MarkdownEngine
 4. 🟡 SearchScreen حقيقي
