@@ -87,9 +87,19 @@ fun NoteDetailScreen(
     val notes by viewModel.notes.collectAsState()
     val backlinks by viewModel.backlinks.collectAsState()
     val existing = remember(noteId, notes) { notes.find { it.id == noteId } }
-    var title by remember(existing) { mutableStateOf(existing?.title ?: "") }
-    var content by remember(existing) { mutableStateOf(TextFieldValue(existing?.content ?: "")) }
+    var title by remember { mutableStateOf(existing?.title ?: "") }
+    var content by remember { mutableStateOf(TextFieldValue(existing?.content ?: "")) }
     var isEditMode by remember { mutableStateOf(noteId == 0L) }
+    var initialized by remember { mutableStateOf(false) }
+
+    LaunchedEffect(existing) {
+        if (!initialized && existing != null) {
+            title = existing.title
+            content = TextFieldValue(existing.content)
+            initialized = true
+        }
+        if (noteId == 0L) initialized = true
+    }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showSaved by remember { mutableStateOf(false) }
     LaunchedEffect(content.text, title) {
