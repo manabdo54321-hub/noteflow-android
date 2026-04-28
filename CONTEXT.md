@@ -268,3 +268,30 @@
 - سمك = strength
 - متقطع = EdgeType.SIMILAR
 - لون = EdgeType
+
+## المرحلة 14A — Graph Data Layer ✅
+
+### الملفات المضافة
+- features/graph/domain/GraphNode.kt
+- features/graph/presentation/GraphViewModel.kt
+- features/graph/presentation/GraphScreen.kt (stub)
+- AppNavigation ← route "graph" مضاف
+
+### Models
+- NodeType: NOTE, TASK, GOAL, TAG
+- NodeIntent: IDEA, ACTION, PLAN, KNOWLEDGE
+- EdgeType: WIKI_LINK, TAG_SHARED, SIMILAR, GOAL_TASK
+- GraphMode: NORMAL, FOCUS, TIMELINE, DISCOVERY
+- GraphNode: id, label, type, intent, x, y, prevX, prevY, linkCount, lastOpenedAt
+- Edge: from, to, strength, type
+- GraphState: zoom, offsetX, offsetY, focusedNodeId, currentMode
+
+### GraphViewModel
+- يجيب Notes + Tasks + Goals + Tags من الـ repositories
+- يحول البيانات لـ GraphNodes
+- يستخرج WIKI_LINK edges من محتوى الـ Notes
+- combine() على 4 flows مع collectLatest
+
+### الخطوة الجاية
+- المرحلة 14B — Physics Engine (GraphEngine.kt)
+- Verlet Integration + Vector Forces + Damping
