@@ -77,6 +77,56 @@
 ✅ المرحلة 10 — إصلاح TaskListScreen tag filter
 ✅ المرحلة 11 — GoalsScreen من الصفر
 
+## Obsidian Toolbar System — مكتمل جزئياً
+
+### الملفات
+- ObsidianTextEngine.kt ✅ — كل الـ text logic
+- ObsidianToolbar.kt ✅ — الـ UI + selection fix
+- MarkdownEngine.kt ✅ — Visual Transformation
+
+### إصلاحات مهمة تمت
+- KEYBOARD_TAP crash → استبدل بـ VIRTUAL_KEY ✅
+- حذف ObsidianToolbar القديم من HomeScreen ✅
+- Selection fix بـ savedValue + LaunchedEffect ✅
+- MarkdownEngine H1-H6 + inline styles + tags + checkboxes ✅
+- MarkdownVisualTransformation.kt — محذوف (كان متعارض)
+- MarkdownInlineStyles.kt — محذوف (كان متعارض)
+
+### أزرار الـ Toolbar الحالية ✅
+- Bold → **text**
+- Italic → *text*
+- Heading H1/H2/H3 → # / ## / ###
+- Bullet List → -
+- Numbered List → 1.
+- Checkbox → - [ ]
+- Code inline → `text`
+- Code Block → ```
+- Quote → >
+- Wiki Link → [[text]]
+- Highlight → ==text==
+- Strikethrough → ~~text~~
+- Table → | col |
+- Tag → #
+- Undo/Redo ✅
+- Indent/Unindent ✅
+
+### ناقص في الـ Toolbar
+- H4/H5/H6 أزرار (موجودة في Engine بس مش في الـ UI)
+- External Link → [نص](رابط)
+- Embed → ![[ملاحظة]]
+- Callouts → > [!INFO]
+
+### مراحل Obsidian Toolbar
+✅ المرحلة 1 — إصلاح الـ Selection
+✅ المرحلة 2 — Toolbar أزرار (جزئي — ناقص H4-H6 + External Link + Embed)
+✅ المرحلة 3 — Preview Mode (MarkdownEngine)
+🟠 المرحلة 4 — Callouts + Advanced
+
+### مؤجل (مش أولوية)
+- Canvas — محتاج library ضخمة
+- LaTeX / Mermaid — محتاج WebView
+- Properties/YAML — مش أولوية
+
 ## Goals System — مكتمل ✅
 - Goal.kt — domain model
 - GoalEntity.kt — Room entity
@@ -107,17 +157,19 @@
 - entities: NoteEntity, TaskEntity, SessionEntity, AiChatEntity, TagEntity, NoteTagCrossRef, TaskTagCrossRef, GoalTagCrossRef, GoalEntity
 
 ## الناقص (الأولوية بالترتيب)
-1. 🟠 NoteDetailScreen ← tag suggestions + highlight
-2. 🟡 SearchScreen حقيقي
-3. 🟡 الضوضاء البيضاء — ملفات mp3
-4. 🟢 AI Integration بـ Groq
-5. 🟢 Graph View
-6. 🟢 Export PDF
-7. 🔵 مسح crash logger من NoteFlowApp
+1. 🟠 المرحلة 4 Obsidian — Callouts + Advanced (H4-H6 + External Link + Embed)
+2. 🟠 NoteDetailScreen ← tag suggestions + highlight
+3. 🟡 SearchScreen حقيقي
+4. 🟡 الضوضاء البيضاء — ملفات mp3
+5. 🟢 AI Integration بـ Groq
+6. 🟢 Graph View
+7. 🟢 Export PDF
+8. 🔵 مسح crash logger من NoteFlowApp
 
 ## آخر حاجة وصلنا ليها
-GoalsScreen اتعملت بالكامل وعمل build ✅
-الخطوة الجاية: NoteDetailScreen ← tag suggestions + highlight
+- MarkdownEngine H1-H6 + Tags coloring ✅
+- Build نجح ✅
+- الخطوة الجاية: المرحلة 4 Obsidian — Callouts + Advanced
 
 ## قواعد العمل من Termux
 - الملفات بتتكتب بـ cat > file << 'EOF'
