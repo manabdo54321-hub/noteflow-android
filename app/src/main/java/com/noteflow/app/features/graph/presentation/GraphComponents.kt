@@ -6,20 +6,25 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterCenterFocus
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,52 +32,92 @@ import com.noteflow.app.features.graph.domain.GraphMode
 import com.noteflow.app.features.graph.domain.GraphNode
 import com.noteflow.app.features.graph.domain.NodeType
 
-private val SurfaceColor    = Color(0xFF1C1B1B)
-private val SurfaceVariant  = Color(0xFF353534)
-private val PrimaryColor    = Color(0xFFCABEFF)
-private val TertiaryColor   = Color(0xFF75D1FF)
-private val OutlineVariant  = Color(0xFF48454F)
-private val TopBarBg        = Color(0xFF0E0E0E)
+private val SurfaceColor   = Color(0xFF1C1B1B)
+private val SurfaceVariant = Color(0xFF353534)
+private val PrimaryColor   = Color(0xFFCABEFF)
+private val AccentColor    = Color(0xFF8A70FF)
+private val OutlineVariant = Color(0xFF48454F)
+private val TopBarBg       = Color(0xFF0E0E0E)
+private val IconGray       = Color(0xFF71717A)
 
 @Composable
 fun GraphTopBar(
     modifier: Modifier = Modifier,
     currentMode: GraphMode,
+    showSearch: Boolean = false,
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
     onBack: () -> Unit,
     onExitFocus: () -> Unit
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .background(TopBarBg.copy(alpha = 0.85f))
-            .border(
-                width = 1.dp,
-                color = SurfaceColor,
-                shape = RoundedCornerShape(0.dp)
-            )
+            .border(width = 1.dp, color = SurfaceColor, shape = RoundedCornerShape(0.dp))
             .statusBarsPadding()
-            .padding(horizontal = 12.dp)
-            .height(64.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color(0xFF71717A))
-        }
-        Text(
-            "NOTEFLOW",
-            color = PrimaryColor,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 3.sp,
-            modifier = Modifier.weight(1f)
-        )
-        if (currentMode == GraphMode.FOCUS) {
-            IconButton(onClick = onExitFocus) {
-                Icon(Icons.Default.Close, contentDescription = null, tint = Color(0xFF71717A))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .height(64.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = null, tint = IconGray)
             }
-        } else {
-            IconButton(onClick = {}) {
-                Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF71717A))
+            Text(
+                "NOTEFLOW",
+                color = PrimaryColor,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 3.sp,
+                modifier = Modifier.weight(1f)
+            )
+            if (currentMode == GraphMode.FOCUS) {
+                IconButton(onClick = onExitFocus) {
+                    Icon(Icons.Default.Close, contentDescription = null, tint = IconGray)
+                }
+            }
+        }
+        if (showSearch) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 12.dp)
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(SurfaceColor)
+                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(50.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null, tint = IconGray, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
+                BasicTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    modifier = Modifier.weight(1f),
+                    textStyle = TextStyle(color = Color(0xFFE5E2E1), fontSize = 14.sp),
+                    cursorBrush = SolidColor(PrimaryColor),
+                    decorationBox = { inner ->
+                        if (searchQuery.isEmpty()) {
+                            Text("Filter nodes...", color = IconGray, fontSize = 14.sp)
+                        }
+                        inner()
+                    }
+                )
+                Spacer(Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(SurfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Tune, contentDescription = null, tint = PrimaryColor, modifier = Modifier.size(16.dp))
+                }
             }
         }
     }
@@ -86,138 +131,119 @@ fun GraphZoomControls(
     onCenter: () -> Unit
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .clip(RoundedCornerShape(50.dp))
+            .background(SurfaceColor.copy(alpha = 0.85f))
+            .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(50.dp))
+            .padding(vertical = 6.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
-                .background(SurfaceColor.copy(alpha = 0.85f))
-                .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
-                .padding(4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(SurfaceVariant)
-                    .clickable { onZoomIn() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("+", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .width(24.dp)
-                    .height(1.dp)
-                    .background(OutlineVariant)
-            )
-            Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(SurfaceVariant)
-                    .clickable { onZoomOut() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("-", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            }
-        }
+        ZoomBtn(label = "+", onClick = onZoomIn)
         Box(
             modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(SurfaceColor.copy(alpha = 0.85f))
-                .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
-                .clickable { onCenter() },
-            contentAlignment = Alignment.Center
-        ) {
+                .width(28.dp)
+                .height(1.dp)
+                .background(OutlineVariant.copy(alpha = 0.5f))
+        )
+        ZoomBtn(label = "-", onClick = onZoomOut)
+        Box(
+            modifier = Modifier
+                .width(28.dp)
+                .height(1.dp)
+                .background(OutlineVariant.copy(alpha = 0.5f))
+        )
+        ZoomBtn(label = "o", onClick = onCenter, isCenter = true)
+    }
+}
+
+@Composable
+private fun ZoomBtn(label: String, onClick: () -> Unit, isCenter: Boolean = false) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        if (isCenter) {
             Icon(
                 Icons.Default.FilterCenterFocus,
                 contentDescription = null,
                 tint = PrimaryColor,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
             )
+        } else {
+            Text(label, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
         }
     }
 }
 
 @Composable
-fun GraphBottomBar(modifier: Modifier = Modifier) {
+fun GraphBottomBar(
+    modifier: Modifier = Modifier,
+    selectedTab: Int = 0,
+    onTabSelected: (Int) -> Unit = {}
+) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 32.dp),
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(50.dp))
-                .background(SurfaceColor.copy(alpha = 0.65f))
+                .background(SurfaceColor.copy(alpha = 0.92f))
                 .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(50.dp))
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            GraphNavBtn {
-                Icon(
-                    Icons.Default.AccountTree,
-                    contentDescription = null,
-                    tint = Color(0xFF71717A),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(
-                        androidx.compose.ui.graphics.Brush.linearGradient(
-                            colors = listOf(PrimaryColor, Color(0xFFA394FF))
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Description,
-                    contentDescription = null,
-                    tint = Color(0xFF0E0E0E),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            GraphNavBtn {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    tint = Color(0xFF71717A),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            GraphNavBtn {
-                Icon(
-                    Icons.Default.History,
-                    contentDescription = null,
-                    tint = Color(0xFF71717A),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+            BottomBarBtn(
+                icon = { Icon(Icons.Default.AccountTree, contentDescription = null, tint = if (selectedTab == 0) Color(0xFF0E0E0E) else IconGray, modifier = Modifier.size(22.dp)) },
+                selected = selectedTab == 0,
+                onClick = { onTabSelected(0) }
+            )
+            BottomBarBtn(
+                icon = { Icon(Icons.Default.Edit, contentDescription = null, tint = if (selectedTab == 1) Color(0xFF0E0E0E) else IconGray, modifier = Modifier.size(22.dp)) },
+                selected = selectedTab == 1,
+                onClick = { onTabSelected(1) }
+            )
+            BottomBarBtn(
+                icon = { Icon(Icons.Default.Search, contentDescription = null, tint = if (selectedTab == 2) Color(0xFF0E0E0E) else IconGray, modifier = Modifier.size(22.dp)) },
+                selected = selectedTab == 2,
+                onClick = { onTabSelected(2) }
+            )
+            BottomBarBtn(
+                icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = if (selectedTab == 3) Color(0xFF0E0E0E) else IconGray, modifier = Modifier.size(22.dp)) },
+                selected = selectedTab == 3,
+                onClick = { onTabSelected(3) }
+            )
         }
     }
 }
 
 @Composable
-private fun GraphNavBtn(onClick: () -> Unit = {}, content: @Composable () -> Unit) {
+private fun BottomBarBtn(
+    icon: @Composable () -> Unit,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .size(52.dp)
             .clip(CircleShape)
+            .background(
+                if (selected) androidx.compose.ui.graphics.Brush.linearGradient(
+                    colors = listOf(PrimaryColor, AccentColor)
+                ) else androidx.compose.ui.graphics.Brush.linearGradient(
+                    colors = listOf(Color.Transparent, Color.Transparent)
+                )
+            )
             .clickable { onClick() },
         contentAlignment = Alignment.Center
-    ) { content() }
+    ) {
+        icon()
+    }
 }
 
 @Composable
@@ -277,12 +303,7 @@ fun GraphNodeDetailsPanel(
                 .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
                 .padding(10.dp)
         ) {
-            Text(
-                node.label,
-                color = Color(0xFFC9C4D0),
-                fontSize = 12.sp,
-                maxLines = 3
-            )
+            Text(node.label, color = Color(0xFFC9C4D0), fontSize = 12.sp, maxLines = 3)
         }
         Spacer(Modifier.height(16.dp))
         Text(
@@ -309,11 +330,7 @@ fun GraphNodeDetailsPanel(
                     tint = Color(0xFF938F9A),
                     modifier = Modifier.size(14.dp)
                 )
-                Text(
-                    linked.label.take(20),
-                    color = Color(0xFFE5E2E1),
-                    fontSize = 12.sp
-                )
+                Text(linked.label.take(20), color = Color(0xFFE5E2E1), fontSize = 12.sp)
             }
         }
     }

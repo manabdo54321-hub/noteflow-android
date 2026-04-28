@@ -22,15 +22,19 @@ fun GraphScreen(
     val graphState by viewModel.graphState.collectAsState()
     val scope      = rememberCoroutineScope()
 
-    var zoom    by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
-    var canvasW by remember { mutableStateOf(0f) }
-    var canvasH by remember { mutableStateOf(0f) }
+    var zoom     by remember { mutableStateOf(1f) }
+    var offsetX  by remember { mutableStateOf(0f) }
+    var offsetY  by remember { mutableStateOf(0f) }
+    var canvasW  by remember { mutableStateOf(0f) }
+    var canvasH  by remember { mutableStateOf(0f) }
 
     var selectedNode by remember {
         mutableStateOf<com.noteflow.app.features.graph.domain.GraphNode?>(null)
     }
+
+    var selectedTab  by remember { mutableStateOf(0) }
+    var showSearch   by remember { mutableStateOf(false) }
+    var searchQuery  by remember { mutableStateOf("") }
 
     val connectionCounts = remember(edges) {
         val map = mutableMapOf<String, Int>()
@@ -90,10 +94,13 @@ fun GraphScreen(
         )
 
         GraphTopBar(
-            modifier       = Modifier.align(Alignment.TopStart),
-            currentMode    = graphState.currentMode,
-            onBack         = onBack,
-            onExitFocus    = {
+            modifier           = Modifier.align(Alignment.TopStart),
+            currentMode        = graphState.currentMode,
+            showSearch         = showSearch,
+            searchQuery        = searchQuery,
+            onSearchQueryChange = { searchQuery = it },
+            onBack             = onBack,
+            onExitFocus        = {
                 viewModel.setFocusedNode(null)
                 viewModel.setMode(
                     com.noteflow.app.features.graph.domain.GraphMode.NORMAL
@@ -104,8 +111,8 @@ fun GraphScreen(
 
         GraphZoomControls(
             modifier  = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 120.dp),
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp),
             onZoomIn  = { zoom = (zoom * 1.2f).coerceAtMost(3f) },
             onZoomOut = { zoom = (zoom / 1.2f).coerceAtLeast(0.3f) },
             onCenter  = { zoom = 1f; offsetX = 0f; offsetY = 0f }
@@ -131,9 +138,14 @@ fun GraphScreen(
         }
 
         GraphBottomBar(
-            modifier = Modifier
+            modifier     = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
+                .padding(bottom = 32.dp),
+            selectedTab  = selectedTab,
+            onTabSelected = { tab ->
+                selectedTab = tab
+                showSearch  = tab == 2
+            }
         )
     }
 }
