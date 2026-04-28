@@ -136,6 +136,8 @@ fun ObsidianToolbar(
         TDiv()
         // ── Links & tags ─────────────────────────────────────
         TBtn("[[") { act(tfWikiLink(savedValue)) }
+        TBtn("![[") { act(tfCursor(savedValue, "![[]]")) }
+        TBtn("[]()"){ act(tfCursor(savedValue, "[](url)")) }
         TBtn("#")  { act(tfTag(savedValue)) }
         TDiv()
 
