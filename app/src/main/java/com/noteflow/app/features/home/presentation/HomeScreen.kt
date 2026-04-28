@@ -86,6 +86,7 @@ fun HomeScreen(
     onNavigateToTasks: () -> Unit,
     onNavigateToNotes: () -> Unit,
     onNavigateToStats: () -> Unit,
+    onNavigateToGraph: () -> Unit = {},
     onNavigateToSettings: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToAi: () -> Unit,
@@ -165,7 +166,7 @@ fun HomeScreen(
                     scrollState.animateScrollTo(scrollState.maxValue)
                 }
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-                    HomeTopBar(greeting, { showRightDrawer = true }, { showLeftDrawer = true }, onNavigateToStats)
+                    HomeTopBar(greeting, { showRightDrawer = true }, { showLeftDrawer = true }, onNavigateToStats, onNavigateToGraph)
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Box(modifier = Modifier.graphicsLayer(alpha = writeAlpha)) {
                             HomeQuickWrite(
@@ -582,12 +583,12 @@ private fun FullScreenTaskRow(task: Task, onToggle: () -> Unit) {
 }
 
 @Composable
-private fun HomeTopBar(greeting: String, onShowRightDrawer: () -> Unit, onShowLeftDrawer: () -> Unit, onNavigateToStats: () -> Unit) {
+private fun HomeTopBar(greeting: String, onShowRightDrawer: () -> Unit, onShowLeftDrawer: () -> Unit, onNavigateToStats: () -> Unit, onNavigateToGraph: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1C1B1B)).statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onShowLeftDrawer) { Icon(Icons.Default.Menu, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(22.dp)) }
-            IconButton(onClick = onNavigateToStats) { Icon(Icons.Default.ShowChart, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(22.dp)) }
+            IconButton(onClick = onNavigateToGraph) { Icon(Icons.Default.ShowChart, contentDescription = null, tint = OnSurface.copy(alpha = 0.6f), modifier = Modifier.size(22.dp)) }
         }
         Row(modifier = Modifier.clickable { onShowRightDrawer() }, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(horizontalAlignment = Alignment.End) {
@@ -602,7 +603,8 @@ private fun HomeTopBar(greeting: String, onShowRightDrawer: () -> Unit, onShowLe
 }
 
 @Composable
-private fun HomeLeftDrawer(onClose: () -> Unit, onNavigateToNotes: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToTimer: () -> Unit, onNavigateToStats: () -> Unit, onNavigateToWorld: () -> Unit) {
+private fun HomeLeftDrawer(onClose: () -> Unit, onNavigateToNotes: () -> Unit, onNavigateToTasks: () -> Unit, onNavigateToTimer: () -> Unit, onNavigateToStats: () -> Unit,
+    onNavigateToGraph: () -> Unit = {}, onNavigateToWorld: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)).clickable { onClose() })
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
     Column(modifier = Modifier.fillMaxHeight().width(280.dp).background(Color(0xFF1C1B1B)).statusBarsPadding().padding(24.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

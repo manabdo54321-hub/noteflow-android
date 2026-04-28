@@ -52,6 +52,7 @@ fun AppNavigation(
                     onNavigateToTasks = { navController.navigate("tasks") },
                     onNavigateToNotes = { navController.navigate("notes") },
                     onNavigateToStats = { navController.navigate("stats") },
+                    onNavigateToGraph = { navController.navigate("graph") },
                     onNavigateToSettings = { navController.navigate("settings") },
                     onNavigateToSearch = { navController.navigate("search") },
                     onNavigateToAi = { navController.navigate("ai") },
