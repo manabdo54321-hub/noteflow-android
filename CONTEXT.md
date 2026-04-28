@@ -77,6 +77,9 @@
 ✅ المرحلة 10 — إصلاح TaskListScreen tag filter
 ✅ المرحلة 11 — GoalsScreen من الصفر
 ✅ المرحلة 12 — Obsidian Toolbar المرحلة 4 (Callouts + Advanced)
+✅ المرحلة 13 — NoteDetailScreen Tags
+✅ المرحلة 14A — Graph Data Layer
+✅ المرحلة 14B — Physics Engine
 
 ## Obsidian Toolbar System — مكتمل ✅
 
@@ -182,7 +185,7 @@
 - المرحلة 12 خلصت ✅
 - Obsidian Toolbar كامل مع Callouts + External Link + Embed + Hidden Comment
 - Build نجح ✅
-- الخطوة الجاية: NoteDetailScreen ← tag suggestions + highlighting
+- الخطوة الجاية: المرحلة 14C — Canvas + Interaction (GraphRenderer + GraphScreen)
 
 ## قواعد العمل من Termux
 - الملفات بتتكتب بـ cat > file << 'EOF'
