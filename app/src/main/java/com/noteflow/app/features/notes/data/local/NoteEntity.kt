@@ -26,8 +26,8 @@ data class NoteEntity(
             id = note.id,
             title = note.title,
             content = note.content,
-            createdAt = note.createdAt,
-            updatedAt = note.updatedAt
+            createdAt = if (note.createdAt == 0L) System.currentTimeMillis() else note.createdAt,
+            updatedAt = System.currentTimeMillis()
         )
     }
 }

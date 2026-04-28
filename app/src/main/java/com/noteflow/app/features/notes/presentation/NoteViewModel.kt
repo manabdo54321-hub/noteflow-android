@@ -33,7 +33,10 @@ class NoteViewModel @Inject constructor(
     private val _backlinks = MutableStateFlow<List<Note>>(emptyList())
     val backlinks: StateFlow<List<Note>> = _backlinks.asStateFlow()
 
-    // Auto-save state
+    // savedNoteId - بنحفظ الـ id الحقيقي بعد اول save
+    private val _savedNoteId = MutableStateFlow<Long?>(null)
+    val savedNoteId: StateFlow<Long?> = _savedNoteId.asStateFlow()
+
     private val _autoSaveContent = MutableStateFlow<Triple<String, String, Long>?>(null)
 
     init {
@@ -52,20 +55,44 @@ class NoteViewModel @Inject constructor(
         viewModelScope.launch {
             _autoSaveContent
                 .drop(1)
-                .debounce(2000)
+                .debounce(1500)
                 .collect { triple ->
                     triple?.let { (title, content, id) ->
                         if (title.isNotBlank()) {
-                            val note = Note(id = id, title = title, content = content)
-                            saveNoteUseCase(note)
+                            doSave(title, content, id)
                         }
                     }
                 }
         }
     }
 
+    private suspend fun doSave(title: String, content: String, id: Long): Long {
+        val now = System.currentTimeMillis()
+        val existingNote = if (id != 0L) _notes.value.find { it.id == id } else null
+        val note = Note(
+            id = id,
+            title = title,
+            content = content,
+            createdAt = existingNote?.createdAt ?: now,
+            updatedAt = now
+        )
+        val result = saveNoteUseCase(note)
+        val newId = result.getOrNull() ?: id
+        if (_savedNoteId.value == null && newId != 0L) {
+            _savedNoteId.value = newId
+        }
+        result.onFailure { _error.value = it.message }
+        return newId
+    }
+
     fun triggerAutoSave(title: String, content: String, id: Long) {
         _autoSaveContent.value = Triple(title, content, id)
+    }
+
+    fun saveNote(title: String, content: String, id: Long = 0) {
+        viewModelScope.launch {
+            if (title.isNotBlank()) doSave(title, content, id)
+        }
     }
 
     fun loadBacklinks(noteTitle: String, noteId: Long) {
@@ -73,13 +100,6 @@ class NoteViewModel @Inject constructor(
             repository.getBacklinks(noteTitle, noteId).collect {
                 _backlinks.value = it
             }
-        }
-    }
-
-    fun saveNote(title: String, content: String, id: Long = 0) {
-        viewModelScope.launch {
-            val note = Note(id = id, title = title, content = content)
-            saveNoteUseCase(note).onFailure { _error.value = it.message }
         }
     }
 
