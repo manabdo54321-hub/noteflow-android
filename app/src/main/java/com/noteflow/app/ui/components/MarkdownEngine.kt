@@ -37,6 +37,21 @@ private fun AnnotatedString.Builder.appendMarkdownLine(line: String) {
                 append(line.removePrefix("## "))
             }
         }
+        line.startsWith("###### ") -> {
+            withStyle(SpanStyle(color = MdPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)) {
+                append(line.removePrefix("###### "))
+            }
+        }
+        line.startsWith("##### ") -> {
+            withStyle(SpanStyle(color = MdPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)) {
+                append(line.removePrefix("##### "))
+            }
+        }
+        line.startsWith("#### ") -> {
+            withStyle(SpanStyle(color = MdPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)) {
+                append(line.removePrefix("#### "))
+            }
+        }
         line.startsWith("### ") -> {
             withStyle(SpanStyle(color = MdPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)) {
                 append(line.removePrefix("### "))
@@ -135,6 +150,13 @@ private fun AnnotatedString.Builder.appendInlineMarkdown(text: String) {
                     }
                     i = end + 2
                 } else { append(text[i]); i++ }
+            }
+            text[i] == '#' && (i == 0 || text[i-1] == ' ') -> {
+                val end = text.indexOf(' ', i + 1).let { if (it == -1) text.length else it }
+                withStyle(SpanStyle(color = MdAccent, fontWeight = FontWeight.Bold)) {
+                    append(text.substring(i, end))
+                }
+                i = end
             }
             else -> { append(text[i]); i++ }
         }
