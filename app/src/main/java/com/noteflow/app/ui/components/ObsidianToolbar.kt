@@ -131,7 +131,9 @@ fun ObsidianToolbar(
         TBtn("⊞")   { act(tfTable(savedValue)) }
         TBtn("—")   { act(tfCursor(savedValue, "\n---\n")) }
         TDiv()
-
+        // ── Callouts ─────────────────────────────────────────
+        TBtn("!") { act(tfCursor(savedValue, "> [!INFO] ")) }
+        TDiv()
         // ── Links & tags ─────────────────────────────────────
         TBtn("[[") { act(tfWikiLink(savedValue)) }
         TBtn("#")  { act(tfTag(savedValue)) }

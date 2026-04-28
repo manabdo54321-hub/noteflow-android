@@ -7,13 +7,20 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
 
-val MdPrimary = Color(0xFFCABEFF)
-val MdAccent = Color(0xFF8A70FF)
-val MdTertiary = Color(0xFF75D1FF)
-val MdSurface = Color(0xFF2A2A2A)
-val MdError = Color(0xFFFF6B6B)
-val MdWhite = Color(0xFFE5E2E1)
-val MdGray = Color(0xFFC8C5CD)
+val MdPrimary   = Color(0xFFCABEFF)
+val MdAccent    = Color(0xFF8A70FF)
+val MdTertiary  = Color(0xFF75D1FF)
+val MdSurface   = Color(0xFF2A2A2A)
+val MdError     = Color(0xFFFF6B6B)
+val MdWhite     = Color(0xFFE5E2E1)
+val MdGray      = Color(0xFFC8C5CD)
+
+// ── Callout colors ───────────────────────────────────────────
+val MdCalloutInfo     = Color(0xFF75D1FF)   // أزرق
+val MdCalloutWarning  = Color(0xFFFFB347)   // برتقالي
+val MdCalloutTip      = Color(0xFF7EC87E)   // أخضر
+val MdCalloutDanger   = Color(0xFFFF6B6B)   // أحمر
+val MdCalloutQuestion = Color(0xFFCABEFF)   // بنفسجي
 
 fun buildMarkdownAnnotated(text: String): AnnotatedString {
     return buildAnnotatedString {
@@ -27,16 +34,27 @@ fun buildMarkdownAnnotated(text: String): AnnotatedString {
 
 private fun AnnotatedString.Builder.appendMarkdownLine(line: String) {
     when {
-        line.startsWith("# ") -> {
-            withStyle(SpanStyle(color = MdPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)) {
-                append(line.removePrefix("# "))
-            }
+        // ── Callouts ────────────────────────────────────────
+        line.startsWith("> [!INFO]") -> {
+            appendCallout(line, "ℹ️", MdCalloutInfo)
         }
-        line.startsWith("## ") -> {
-            withStyle(SpanStyle(color = MdPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)) {
-                append(line.removePrefix("## "))
-            }
+        line.startsWith("> [!WARNING]") -> {
+            appendCallout(line, "⚠️", MdCalloutWarning)
         }
+        line.startsWith("> [!TIP]") -> {
+            appendCallout(line, "💡", MdCalloutTip)
+        }
+        line.startsWith("> [!DANGER]") -> {
+            appendCallout(line, "🔴", MdCalloutDanger)
+        }
+        line.startsWith("> [!QUESTION]") -> {
+            appendCallout(line, "❓", MdCalloutQuestion)
+        }
+        line.startsWith("> [!NOTE]") -> {
+            appendCallout(line, "📝", MdCalloutInfo)
+        }
+
+        // ── Headings ────────────────────────────────────────
         line.startsWith("###### ") -> {
             withStyle(SpanStyle(color = MdPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)) {
                 append(line.removePrefix("###### "))
@@ -57,14 +75,30 @@ private fun AnnotatedString.Builder.appendMarkdownLine(line: String) {
                 append(line.removePrefix("### "))
             }
         }
+        line.startsWith("## ") -> {
+            withStyle(SpanStyle(color = MdPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)) {
+                append(line.removePrefix("## "))
+            }
+        }
+        line.startsWith("# ") -> {
+            withStyle(SpanStyle(color = MdPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)) {
+                append(line.removePrefix("# "))
+            }
+        }
+
+        // ── Blockquote عادي ─────────────────────────────────
         line.startsWith("> ") -> {
             withStyle(SpanStyle(color = MdGray, fontStyle = FontStyle.Italic, background = MdSurface)) {
                 append("  " + line.removePrefix("> "))
             }
         }
+
+        // ── Horizontal Rule ──────────────────────────────────
         line.startsWith("---") -> {
             withStyle(SpanStyle(color = MdGray)) { append("─".repeat(30)) }
         }
+
+        // ── Checkboxes ───────────────────────────────────────
         line.startsWith("- [x] ") -> {
             withStyle(SpanStyle(color = MdPrimary)) { append("✅ ") }
             withStyle(SpanStyle(color = MdGray, textDecoration = TextDecoration.LineThrough)) {
@@ -75,6 +109,8 @@ private fun AnnotatedString.Builder.appendMarkdownLine(line: String) {
             withStyle(SpanStyle(color = MdGray)) { append("☐ ") }
             appendInlineMarkdown(line.removePrefix("- [ ] "))
         }
+
+        // ── Lists ────────────────────────────────────────────
         line.startsWith("- ") || line.startsWith("• ") -> {
             withStyle(SpanStyle(color = MdPrimary, fontWeight = FontWeight.Bold)) { append("• ") }
             appendInlineMarkdown(line.removePrefix("- ").removePrefix("• "))
@@ -84,12 +120,35 @@ private fun AnnotatedString.Builder.appendMarkdownLine(line: String) {
             withStyle(SpanStyle(color = MdPrimary, fontWeight = FontWeight.Bold)) { append("$num. ") }
             appendInlineMarkdown(line.substringAfter(". "))
         }
+
+        // ── Code Block ───────────────────────────────────────
         line.startsWith("```") -> {
             withStyle(SpanStyle(color = MdTertiary, fontFamily = FontFamily.Monospace, background = MdSurface)) {
                 append(line)
             }
         }
+
         else -> appendInlineMarkdown(line)
+    }
+}
+
+// ── Callout helper ───────────────────────────────────────────
+private fun AnnotatedString.Builder.appendCallout(
+    line: String,
+    icon: String,
+    color: Color
+) {
+    val typeEnd = line.indexOf("]")
+    val title = if (typeEnd != -1 && typeEnd + 1 < line.length)
+        line.substring(typeEnd + 1).trim()
+    else ""
+
+    withStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold, fontSize = 13.sp)) {
+        append("$icon ")
+    }
+    withStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold)) {
+        if (title.isNotEmpty()) append(title)
+        else append(line.substringAfter(">").trim())
     }
 }
 
