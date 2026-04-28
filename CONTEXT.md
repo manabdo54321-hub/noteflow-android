@@ -211,3 +211,60 @@
   ui/components/ObsidianToolbar.kt
   ui/components/ObsidianTextEngine.kt
   ui/components/MarkdownEngine.kt
+
+## خطة Graph View النهائية — المراحل 13-20
+
+### هيكل الملفات
+- ui/screens/graph/GraphScreen.kt
+- ui/screens/graph/GraphEngine.kt
+- ui/screens/graph/GraphNode.kt
+- ui/screens/graph/GraphRenderer.kt
+- ui/screens/graph/GraphClustering.kt
+- ui/screens/graph/GraphViewModel.kt
+
+### Data Models
+- NodeType: NOTE, TASK, GOAL, TAG
+- NodeIntent: IDEA, ACTION, PLAN, KNOWLEDGE
+- EdgeType: WIKI_LINK, TAG_SHARED, SIMILAR, GOAL_TASK
+- Edge: from, to, strength(Float), type
+- GraphMode: NORMAL, FOCUS, TIMELINE, DISCOVERY
+- GraphState: zoom, offsetX, offsetY, focusedNodeId, currentMode
+
+### قواعد Physics
+- Verlet Integration (مش Euler)
+- Force = Vector (x,y) مش قيمة واحدة
+- Damping = 0.85f
+- Max Speed = 10f
+- Repulsion بين كل الـ Nodes
+- Attraction = Edge.strength
+
+### المراحل التفصيلية
+- المرحلة 13  : NoteDetailScreen Tags
+- المرحلة 14A : Graph Data Layer (Node + Edge + Intent)
+- المرحلة 14B : Physics Engine (Verlet + Vector Forces)
+- المرحلة 14C : Canvas + Interaction (Drag + Zoom + Memory)
+- المرحلة 15  : Focus Mode + Radar Pulse
+- المرحلة 16  : Timeline Mode (X=تاريخ Y=نوع)
+- المرحلة 17  : Smart Clustering (Tag+Date+Words)
+- المرحلة 18  : Discovery Mode (روابط مخفية + Pulse)
+- المرحلة 19  : Energy System (حسب آخر فتح)
+- المرحلة 20  : Onboarding بصري (Demo اول مرة)
+
+### ترتيب التنفيذ الصح
+1. 14A ثم 14B ثم 14C ثم اختبار
+2. 15 ثم 16 ثم اختبار
+3. 17 ثم 18 ثم 19 ثم 20
+
+### Canvas Features لكل Node
+- لون حسب NodeType
+- حجم = عدد الروابط
+- Glow = طاقة + اهمية
+- اضغط = يفتح المحتوى
+- اضغط مطول = Focus Mode
+- سحب = Radar Pulse للمتشابهين
+
+### Edge Visual
+- opacity = strength
+- سمك = strength
+- متقطع = EdgeType.SIMILAR
+- لون = EdgeType
