@@ -206,6 +206,12 @@ private fun AnnotatedString.Builder.appendInlineMarkdown(text: String) {
                     i = end + 1
                 } else { append(text[i]); i++ }
             }
+            text.startsWith("%%", i) -> {
+                val end = text.indexOf("%%", i + 2)
+                if (end != -1) {
+                    i = end + 2
+                } else { append(text[i]); i++ }
+            }
             text[i] == '#' && (i == 0 || text[i-1] == ' ') -> {
                 val end = text.indexOf(' ', i + 1).let { if (it == -1) text.length else it }
                 withStyle(SpanStyle(color = MdAccent, fontWeight = FontWeight.Bold)) {
