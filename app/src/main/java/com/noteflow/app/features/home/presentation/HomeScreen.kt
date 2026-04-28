@@ -278,7 +278,7 @@ fun HomeScreen(
             )
         }
 
-        if (showLeftDrawer) HomeLeftDrawer({ showLeftDrawer = false }, onNavigateToNotes, onNavigateToTasks, onNavigateToTimer, onNavigateToStats, onNavigateToWorld)
+        if (showLeftDrawer) HomeLeftDrawer({ showLeftDrawer = false }, onNavigateToNotes, onNavigateToTasks, onNavigateToTimer, onNavigateToStats, onNavigateToGraph, onNavigateToWorld)
         if (showRightDrawer) HomeRightDrawer({ showRightDrawer = false }, onNavigateToSettings)
     }
     } // end CompositionLocalProvider

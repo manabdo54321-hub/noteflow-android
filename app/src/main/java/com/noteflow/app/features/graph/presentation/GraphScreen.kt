@@ -175,7 +175,7 @@ fun GraphScreen(
             IconButton(onClick = { zoom = (zoom * 1.2f).coerceAtMost(3f) }) {
                 Text("+", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
-            Divider(color = Color.White.copy(alpha = 0.1f), thickness = 1.dp)
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), thickness = 1.dp)
             IconButton(onClick = { zoom = (zoom / 1.2f).coerceAtLeast(0.3f) }) {
                 Text("-", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
@@ -186,7 +186,7 @@ fun GraphScreen(
             onClick = { zoom = 1f; offsetX = 0f; offsetY = 0f },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 80.dp)
+                .padding(end = 12.dp).padding(bottom = 80.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(SurfaceColor.copy(alpha = 0.9f))
                 .size(44.dp)

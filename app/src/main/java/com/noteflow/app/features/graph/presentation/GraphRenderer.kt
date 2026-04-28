@@ -27,9 +27,8 @@ private fun DrawScope.drawEdges(edges: List<RenderEdge>, settings: GraphSettings
     if (settings.edgeMode == EdgeMode.NONE) return
     edges.forEach { edge ->
         if (settings.edgeMode == EdgeMode.WIKI_ONLY &&
-            edge.type != androidx.compose.ui.graphics.toArgb().let {
-                com.noteflow.app.features.graph.domain.EdgeType.WIKI_LINK
-            }) return@forEach
+            edge.type != com.noteflow.app.features.graph.domain.EdgeType.WIKI_LINK
+        ) return@forEach
         val color = EdgeColors[edge.type] ?: Color.White
         val strokeWidth = edge.strength * 3f
         drawLine(
