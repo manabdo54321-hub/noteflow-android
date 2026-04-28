@@ -192,7 +192,7 @@ fun NoteDetailScreen(
                         content = content.copy(text = newText,
                             selection = androidx.compose.ui.text.TextRange(newText.length))
                     },
-                    onTagSelected = { tag -> tagViewModel.selectTag(tag.id) },
+                    onTagSelected = { tag -> tagViewModel.selectTag(tag.id); tagViewModel.onSuggestionQuery("") },
                     onTagRemoved = {},
                     modifier = Modifier.fillMaxWidth().background(SurfaceColor).padding(horizontal = 8.dp, vertical = 4.dp)
                 )
