@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.sp
 
 private val BgColor      = Color(0xFF1A1A1A)
 private val SurfaceHigh  = Color(0xFF2A2A2A)
-private val SurfaceAct   = Color(0xFF3D3560)
 private val PrimaryColor = Color(0xFFCABEFF)
 private val DividerColor = Color(0xFF3A3A3A)
 
@@ -30,10 +29,10 @@ private val DividerColor = Color(0xFF3A3A3A)
 fun ObsidianToolbar(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
+    onCommand: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var showHeadingMenu by remember { mutableStateOf(false) }
-
     val history   = remember { ArrayDeque<TextFieldValue>() }
     val redoStack = remember { ArrayDeque<TextFieldValue>() }
 
@@ -51,6 +50,14 @@ fun ObsidianToolbar(
         onValueChange(safe)
     }
 
+    fun cmd(command: String) {
+        onCommand?.invoke(command)
+    }
+
+    fun actOrCmd(command: String, fallback: () -> TextFieldValue) {
+        if (onCommand != null) cmd(command) else act(fallback())
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -58,24 +65,20 @@ fun ObsidianToolbar(
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment     = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // ── Undo / Redo ──────────────────────────────────────
-        TBtn("↩", tint = if (history.isNotEmpty()) PrimaryColor else PrimaryColor.copy(0.3f)) {
-            if (history.isNotEmpty()) {
-                redoStack.addLast(value)
-                onValueChange(history.removeLast())
-            }
+        // Undo / Redo
+        TBtn("↩", tint = PrimaryColor) {
+            if (onCommand != null) cmd("undo")
+            else if (history.isNotEmpty()) { redoStack.addLast(value); onValueChange(history.removeLast()) }
         }
-        TBtn("↪", tint = if (redoStack.isNotEmpty()) PrimaryColor else PrimaryColor.copy(0.3f)) {
-            if (redoStack.isNotEmpty()) {
-                history.addLast(value)
-                onValueChange(redoStack.removeLast())
-            }
+        TBtn("↪", tint = PrimaryColor) {
+            if (onCommand != null) cmd("redo")
+            else if (redoStack.isNotEmpty()) { history.addLast(value); onValueChange(redoStack.removeLast()) }
         }
         TDiv()
 
-        // ── Headings Dropdown ────────────────────────────────
+        // Headings Dropdown
         Box {
             TBtn("H", tint = if (showHeadingMenu) Color(0xFFCABEFF) else PrimaryColor) {
                 showHeadingMenu = true
@@ -86,24 +89,17 @@ fun ObsidianToolbar(
                 modifier = Modifier.background(Color(0xFF2A2A2A))
             ) {
                 listOf(
-                    "H1" to Pair("# ",  20.sp),
-                    "H2" to Pair("## ", 17.sp),
-                    "H3" to Pair("### ", 15.sp),
-                    "H4" to Pair("#### ", 13.sp),
-                    "H5" to Pair("##### ", 12.sp),
-                    "H6" to Pair("###### ", 11.sp)
+                    "H1" to Pair("h1", "# "),
+                    "H2" to Pair("h2", "## "),
+                    "H3" to Pair("h3", "### "),
+                    "H4" to Pair("h4", "#### "),
+                    "H5" to Pair("h5", "##### "),
+                    "H6" to Pair("h6", "###### ")
                 ).forEach { (label, data) ->
                     DropdownMenuItem(
-                        text = {
-                            Text(
-                                label,
-                                color = PrimaryColor,
-                                fontSize = data.second,
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
+                        text = { Text(label, color = PrimaryColor, fontWeight = FontWeight.Bold) },
                         onClick = {
-                            act(tfLinePrefix(value, data.first))
+                            actOrCmd(data.first) { tfLinePrefix(value, data.second) }
                             showHeadingMenu = false
                         }
                     )
@@ -112,43 +108,44 @@ fun ObsidianToolbar(
         }
         TDiv()
 
-        // ── Inline styles ────────────────────────────────────
-        TBtn(icon = Icons.Default.FormatBold)   { act(tfWrap(value, "**")) }
-        TBtn(icon = Icons.Default.FormatItalic) { act(tfWrap(value, "*")) }
-        TBtn("S̶") { act(tfWrap(value, "~~")) }
-        TBtn("==") { act(tfWrap(value, "==")) }
-        TBtn(icon = Icons.Default.Code) { act(tfWrap(value, "`")) }
+        // Inline styles
+        TBtn(icon = Icons.Default.FormatBold)   { actOrCmd("bold")          { tfWrap(value, "**") } }
+        TBtn(icon = Icons.Default.FormatItalic) { actOrCmd("italic")        { tfWrap(value, "*") } }
+        TBtn("S̶")                          { actOrCmd("strikethrough") { tfWrap(value, "~~") } }
+        TBtn("==")                               { actOrCmd("highlight")     { tfWrap(value, "==") } }
+        TBtn(icon = Icons.Default.Code)          { actOrCmd("inlineCode")    { tfWrap(value, "`") } }
         TDiv()
 
-        // ── Lists ────────────────────────────────────────────
-        TBtn("•")  { act(tfToggleList(value, "- ")) }
-        TBtn("1.") { act(tfNumbered(value)) }
-        TBtn("☐")  { act(tfToggleList(value, "- [ ] ")) }
+        // Lists
+        TBtn("•")  { actOrCmd("bullet")   { tfToggleList(value, "- ") } }
+        TBtn("1.") { actOrCmd("numbered") { tfNumbered(value) } }
+        TBtn("☐")  { actOrCmd("checkbox") { tfToggleList(value, "- [ ] ") } }
         TDiv()
 
-        // ── Block elements ───────────────────────────────────
-        TBtn("❝")   { act(tfLinePrefix(value, "> ")) }
-        TBtn("```") { act(tfCodeBlock(value)) }
-        TBtn("⊞")   { act(tfTable(value)) }
-        TBtn("—")   { act(tfCursor(value, "\n---\n")) }
-        TDiv()
-        // ── Callouts ─────────────────────────────────────────
-        TBtn("!") { act(tfCursor(value, "> [!INFO] ")) }
-        TDiv()
-        // ── Links & tags ─────────────────────────────────────
-        TBtn("[[") { act(tfWikiLink(value)) }
-        TBtn("![[") { act(tfCursor(value, "![[]]")) }
-        TBtn("[]()"){ act(tfCursor(value, "[](url)")) }
-        TBtn("#")  { act(tfTag(value)) }
+        // Block elements
+        TBtn("❝")   { actOrCmd("quote")     { tfLinePrefix(value, "> ") } }
+        TBtn("```") { actOrCmd("codeblock") { tfCodeBlock(value) } }
+        TBtn("⊞")   { actOrCmd("table")     { tfTable(value) } }
+        TBtn("—")   { actOrCmd("hr")        { tfCursor(value, "\n---\n") } }
         TDiv()
 
-        // ── Indent ───────────────────────────────────────────
-        TBtn("→") { act(tfLinePrefix(value, "  ")) }
-        TBtn("←") { act(tfRmPrefix(value, "  ")) }
+        // Callouts
+        TBtn("!") { actOrCmd("callout") { tfCursor(value, "> [!INFO] ") } }
+        TDiv()
+
+        // Links & tags
+        TBtn("[[")  { actOrCmd("wikilink") { tfWikiLink(value) } }
+        TBtn("![[") { actOrCmd("embed")    { tfCursor(value, "![[]]") } }
+        TBtn("[]()") { actOrCmd("link")   { tfCursor(value, "[](url)") } }
+        TBtn("#")   { actOrCmd("tag")      { tfTag(value) } }
+        TDiv()
+
+        // Indent
+        TBtn("→") { actOrCmd("indent")   { tfLinePrefix(value, "  ") } }
+        TBtn("←") { actOrCmd("unindent") { tfRmPrefix(value, "  ") } }
     }
 }
 
-// ─── UI helpers ─────────────────────────────────────────────
 @Composable
 private fun TBtn(
     label: String = "",

@@ -20,19 +20,26 @@ class NoteFlowBridge(
 fun NoteEditorWebView(
     content: String,
     onContentChange: (String) -> Unit,
+    onWebViewReady: ((String) -> Unit) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isReady by remember { mutableStateOf(false) }
+    val commandExecutor: (String) -> Unit = { cmd ->
+        webViewRef?.evaluateJavascript("executeCommand('$cmd')", null)
+    }
 
     LaunchedEffect(isReady) {
-        if (isReady && content.isNotBlank()) {
-            val escaped = content
-                .replace("\\", "\\\\")
-                .replace("'", "\\'")
-                .replace("\n", "\\n")
-                .replace("\r", "")
-            webViewRef?.evaluateJavascript("setContent('$escaped')", null)
+        if (isReady) {
+            onWebViewReady(commandExecutor)
+            if (content.isNotBlank()) {
+                val escaped = content
+                    .replace("\\", "\\\\")
+                    .replace("'", "\\'")
+                    .replace("\n", "\\n")
+                    .replace("\r", "")
+                webViewRef?.evaluateJavascript("setContent('$escaped')", null)
+            }
         }
     }
 

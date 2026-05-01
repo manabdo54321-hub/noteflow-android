@@ -83,6 +83,7 @@ fun NoteDetailScreen(
     var title by remember { mutableStateOf(existing?.title ?: "") }
     var content by remember { mutableStateOf(TextFieldValue(existing?.content ?: "")) }
     var isEditMode by remember { mutableStateOf(noteId == 0L) }
+    var executeCommand by remember { mutableStateOf<((String) -> Unit)?>(null) }
     var initialized by remember { mutableStateOf(false) }
 
     LaunchedEffect(existing) {
@@ -168,6 +169,7 @@ fun NoteDetailScreen(
                         onContentChange = { newText ->
                             content = content.copy(text = newText)
                         },
+                        onWebViewReady = { cmd -> executeCommand = cmd },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp)
                     )
                 } else {
@@ -202,6 +204,7 @@ fun NoteDetailScreen(
             SharedObsidianToolbar(
                 value = content,
                 onValueChange = { content = it },
+                onCommand = { cmd -> executeCommand?.invoke(cmd) },
                 modifier = Modifier.navigationBarsPadding()
             )
         }
