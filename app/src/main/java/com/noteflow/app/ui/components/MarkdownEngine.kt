@@ -23,206 +23,42 @@ val MdCalloutQuestion = Color(0xFFCABEFF)
 
 fun buildMarkdownAnnotated(text: String): AnnotatedString {
     return buildAnnotatedString {
+        append(text)
+        var pos = 0
         val lines = text.split("\n")
-        lines.forEachIndexed { index, line ->
-            appendMarkdownLine(line)
-            if (index < lines.size - 1) append("\n")
-        }
-    }
-}
-
-private fun AnnotatedString.Builder.appendMarkdownLine(line: String) {
-    when {
-        line.startsWith("> [!INFO]") -> appendCallout(line, "INFO", MdCalloutInfo)
-        line.startsWith("> [!WARNING]") -> appendCallout(line, "WARN", MdCalloutWarning)
-        line.startsWith("> [!TIP]") -> appendCallout(line, "TIP", MdCalloutTip)
-        line.startsWith("> [!DANGER]") -> appendCallout(line, "DANGER", MdCalloutDanger)
-        line.startsWith("> [!QUESTION]") -> appendCallout(line, "?", MdCalloutQuestion)
-        line.startsWith("> [!NOTE]") -> appendCallout(line, "NOTE", MdCalloutInfo)
-        line.startsWith("###### ") -> {
-            withStyle(SpanStyle(color = MdPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)) {
-                append(line.removePrefix("###### "))
+        for (line in lines) {
+            val lineStart = pos
+            val lineEnd = pos + line.length
+            when {
+                line.startsWith("###### ") -> addStyle(SpanStyle(color = MdPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold), lineStart, lineEnd)
+                line.startsWith("##### ")  -> addStyle(SpanStyle(color = MdPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold), lineStart, lineEnd)
+                line.startsWith("#### ")   -> addStyle(SpanStyle(color = MdPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold), lineStart, lineEnd)
+                line.startsWith("### ")    -> addStyle(SpanStyle(color = MdPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold), lineStart, lineEnd)
+                line.startsWith("## ")     -> addStyle(SpanStyle(color = MdPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold), lineStart, lineEnd)
+                line.startsWith("# ")      -> addStyle(SpanStyle(color = MdPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold), lineStart, lineEnd)
+                line.startsWith("> ")      -> addStyle(SpanStyle(color = MdGray), lineStart, lineEnd)
+                line.startsWith("- [ ] ") || line.startsWith("- [x] ") -> addStyle(SpanStyle(color = MdWhite), lineStart, lineEnd)
+                line.startsWith("- ")      -> addStyle(SpanStyle(color = MdWhite), lineStart, lineEnd)
             }
-        }
-        line.startsWith("##### ") -> {
-            withStyle(SpanStyle(color = MdPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)) {
-                append(line.removePrefix("##### "))
-            }
-        }
-        line.startsWith("#### ") -> {
-            withStyle(SpanStyle(color = MdPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)) {
-                append(line.removePrefix("#### "))
-            }
-        }
-        line.startsWith("### ") -> {
-            withStyle(SpanStyle(color = MdPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)) {
-                append(line.removePrefix("### "))
-            }
-        }
-        line.startsWith("## ") -> {
-            withStyle(SpanStyle(color = MdPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)) {
-                append(line.removePrefix("## "))
-            }
-        }
-        line.startsWith("# ") -> {
-            withStyle(SpanStyle(color = MdPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)) {
-                append(line.removePrefix("# "))
-            }
-        }
-        line.startsWith("> ") -> {
-            withStyle(SpanStyle(color = MdGray, fontStyle = FontStyle.Italic, background = MdSurface)) {
-                append("  " + line.removePrefix("> "))
-            }
-        }
-        line.startsWith("---") -> {
-            withStyle(SpanStyle(color = MdGray)) { append("─".repeat(30)) }
-        }
-        line.startsWith("- [x] ") -> {
-            withStyle(SpanStyle(color = MdPrimary)) { append("✅ ") }
-            withStyle(SpanStyle(color = MdGray, textDecoration = TextDecoration.LineThrough)) {
-                appendInlineMarkdown(line.removePrefix("- [x] "))
-            }
-        }
-        line.startsWith("- [ ] ") -> {
-            withStyle(SpanStyle(color = MdGray)) { append("☐ ") }
-            appendInlineMarkdown(line.removePrefix("- [ ] "))
-        }
-        line.startsWith("- ") || line.startsWith("• ") -> {
-            withStyle(SpanStyle(color = MdPrimary, fontWeight = FontWeight.Bold)) { append("• ") }
-            appendInlineMarkdown(line.removePrefix("- ").removePrefix("• "))
-        }
-        line.matches(Regex("^\\d+\\. .*")) -> {
-            val num = line.substringBefore(".")
-            withStyle(SpanStyle(color = MdPrimary, fontWeight = FontWeight.Bold)) { append("$num. ") }
-            appendInlineMarkdown(line.substringAfter(". "))
-        }
-        line.startsWith("```") -> {
-            withStyle(SpanStyle(color = MdTertiary, fontFamily = FontFamily.Monospace, background = MdSurface)) {
-                append(line)
-            }
-        }
-        else -> appendInlineMarkdown(line)
-    }
-}
-
-private fun AnnotatedString.Builder.appendCallout(
-    line: String,
-    label: String,
-    color: Color
-) {
-    val typeEnd = line.indexOf("]")
-    val title = if (typeEnd != -1 && typeEnd + 1 < line.length)
-        line.substring(typeEnd + 1).trim()
-    else ""
-    withStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold, fontSize = 13.sp)) {
-        append("[$label] ")
-    }
-    withStyle(SpanStyle(color = color)) {
-        if (title.isNotEmpty()) append(title)
-        else append(line.substringAfter(">").trim())
-    }
-}
-
-private fun AnnotatedString.Builder.appendInlineMarkdown(text: String) {
-    var i = 0
-    while (i < text.length) {
-        when {
-            text.startsWith("![[", i) -> {
-                val end = text.indexOf("]]", i + 3)
-                if (end != -1) {
-                    withStyle(SpanStyle(color = MdTertiary, fontWeight = FontWeight.Bold,
-                        textDecoration = TextDecoration.Underline)) {
-                        append(">> " + text.substring(i + 3, end))
-                    }
-                    i = end + 2
-                } else { append(text[i]); i++ }
-            }
-            text.startsWith("[[", i) -> {
-                val end = text.indexOf("]]", i + 2)
-                if (end != -1) {
-                    withStyle(SpanStyle(color = MdAccent, fontWeight = FontWeight.Bold,
-                        textDecoration = TextDecoration.Underline)) {
-                        append(text.substring(i + 2, end))
-                    }
-                    i = end + 2
-                } else { append(text[i]); i++ }
-            }
-            text.startsWith("[", i) && !text.startsWith("[[", i) -> {
-                val closeBracket = text.indexOf("]", i + 1)
-                val openParen = if (closeBracket != -1) text.indexOf("(", closeBracket) else -1
-                val closeParen = if (openParen == closeBracket + 1) text.indexOf(")", openParen + 1) else -1
-                if (closeBracket != -1 && openParen == closeBracket + 1 && closeParen != -1) {
-                    val linkText = text.substring(i + 1, closeBracket)
-                    withStyle(SpanStyle(color = MdCalloutInfo,
-                        textDecoration = TextDecoration.Underline)) {
-                        append(linkText)
-                    }
-                    i = closeParen + 1
-                } else { append(text[i]); i++ }
-            }
-            text.startsWith("**", i) -> {
-                val end = text.indexOf("**", i + 2)
-                if (end != -1) {
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = MdWhite)) {
-                        appendInlineMarkdown(text.substring(i + 2, end))
-                    }
-                    i = end + 2
-                } else { append(text[i]); i++ }
-            }
-            text.startsWith("~~", i) -> {
-                val end = text.indexOf("~~", i + 2)
-                if (end != -1) {
-                    withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough, color = MdGray)) {
-                        append(text.substring(i + 2, end))
-                    }
-                    i = end + 2
-                } else { append(text[i]); i++ }
-            }
-            text.startsWith("==", i) -> {
-                val end = text.indexOf("==", i + 2)
-                if (end != -1) {
-                    withStyle(SpanStyle(background = MdPrimary.copy(alpha = 0.25f), color = MdWhite)) {
-                        append(text.substring(i + 2, end))
-                    }
-                    i = end + 2
-                } else { append(text[i]); i++ }
-            }
-            text.startsWith("*", i) && !text.startsWith("**", i) -> {
-                val end = text.indexOf("*", i + 1)
-                if (end != -1 && !text.startsWith("*", end + 1)) {
-                    withStyle(SpanStyle(fontStyle = FontStyle.Italic, color = MdWhite)) {
-                        append(text.substring(i + 1, end))
-                    }
-                    i = end + 1
-                } else { append(text[i]); i++ }
-            }
-            text.startsWith("`", i) && !text.startsWith("```", i) -> {
-                val end = text.indexOf("`", i + 1)
-                if (end != -1) {
-                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace,
-                        color = MdTertiary, background = MdSurface)) {
-                        append(text.substring(i + 1, end))
-                    }
-                    i = end + 1
-                } else { append(text[i]); i++ }
-            }
-            text.startsWith("%%", i) -> {
-                val end = text.indexOf("%%", i + 2)
-                if (end != -1) {
-                    i = end + 2
-                } else { append(text[i]); i++ }
-            }
-            text[i] == '#' && (i == 0 || text[i-1] == ' ') -> {
-                val end = text.indexOf(' ', i + 1).let { if (it == -1) text.length else it }
-                withStyle(SpanStyle(color = MdAccent, fontWeight = FontWeight.Bold)) {
-                    append(text.substring(i, end))
+            val inlinePatterns = listOf(
+                Regex("\*\*(.+?)\*\*") to Pair(SpanStyle(fontWeight = FontWeight.Bold, color = MdWhite), true),
+                Regex("~~(.+?)~~")          to Pair(SpanStyle(color = MdGray, textDecoration = TextDecoration.LineThrough), true),
+                Regex("==(.+?)==")          to Pair(SpanStyle(background = MdPrimary.copy(0.3f), color = MdWhite), true),
+                Regex("\*(.+?)\*")        to Pair(SpanStyle(fontStyle = FontStyle.Italic, color = MdWhite), true),
+                Regex("`(.+?)`")            to Pair(SpanStyle(color = MdTertiary, background = MdSurface), true),
+                Regex("#\w+")              to Pair(SpanStyle(color = MdPrimary), false),
+                Regex("\[\[(.+?)]]")      to Pair(SpanStyle(color = MdPrimary, textDecoration = TextDecoration.Underline), false)
+            )
+            for ((regex, pair) in inlinePatterns) {
+                regex.findAll(line).forEach { match ->
+                    addStyle(pair.first, lineStart + match.range.first, lineStart + match.range.last + 1)
                 }
-                i = end
             }
-            else -> { append(text[i]); i++ }
+            pos += line.length + 1
         }
     }
 }
+
 
 class MarkdownVisualTransformation(
     private val primaryColor: Color = MdPrimary,
