@@ -25,8 +25,8 @@ fun NoteEditorWebView(
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isReady by remember { mutableStateOf(false) }
 
-    LaunchedEffect(content, isReady) {
-        if (isReady) {
+    LaunchedEffect(isReady) {
+        if (isReady && content.isNotBlank()) {
             val escaped = content
                 .replace("\\", "\\\\")
                 .replace("'", "\\'")
