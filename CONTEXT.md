@@ -87,6 +87,36 @@
 - المرحلة 15 - اصلاح OffsetMapping crash في MarkdownEngine
 - المرحلة 16 - تنظيف الكود الميت
 - المرحلة 17 - CrashLogScreen
+- المرحلة A  - WebView + CodeMirror 6 offline
+- المرحلة B  - Toolbar JavaScript Bridge
+
+## Hybrid Editor System - مكتمل
+
+### الملفات
+- app/src/main/assets/editor.html
+- app/src/main/assets/cm6.bundle.js (1.1MB - CodeMirror 6 offline)
+- features/notes/presentation/screens/NoteEditorWebView.kt
+
+### Architecture
+- NoteEditorWebView - Composable بيعرض WebView
+- NoteFlowBridge - JavascriptInterface بيستقبل التغييرات
+- executeCommand - function بتبعت JavaScript commands للـ WebView
+- ObsidianToolbar - onCommand parameter جديد بيبعت commands
+
+### Commands المتاحة
+- undo, redo
+- bold, italic, strikethrough, highlight, inlineCode
+- h1, h2, h3, h4, h5, h6
+- bullet, numbered, checkbox
+- quote, codeblock, table, hr
+- wikilink, embed, link, tag
+- indent, unindent, callout
+
+### قواعد مهمة
+- cm6-build/ في home directory مش جوا المشروع
+- لو عايز تعدل JavaScript: عدل ~/cm6-build/index.js ثم esbuild ثم cp للـ assets
+- ObsidianToolbar لو onCommand موجود يبعت JS command لو null يشتغل على TextFieldValue
+- المرحلة C الجاية: Live Preview - bold يظهر عريض بدون النجوم
 
 ## Obsidian Toolbar System - مكتمل
 
@@ -231,14 +261,16 @@
 - smart quotes بتيجي لما تكتب نص عربي في Python heredoc - استخدم escaped quotes
 
 ## الناقص (الاولوية بالترتيب)
-1. تحسين شكل GraphScreen (ايقونات + chips + glow)
-2. Footnote في MarkdownEngine
-3. Alias Link في MarkdownEngine
-4. SearchScreen حقيقي
-5. الضوضاء البيضاء - ملفات mp3
-6. AI Integration بـ Groq
-7. Export PDF
-8. مسح crash logger من NoteFlowApp
+1. المرحلة C - Live Preview (bold بدون نجوم)
+2. المرحلة D - Graph View بـ D3.js
+3. تحسين شكل GraphScreen (ايقونات + chips + glow)
+4. Footnote في MarkdownEngine
+5. Alias Link في MarkdownEngine
+6. SearchScreen حقيقي
+7. الضوضاء البيضاء - ملفات mp3
+8. AI Integration بـ Groq
+9. Export PDF
+10. مسح crash logger من NoteFlowApp
 
 ## قواعد العمل من Termux
 - الملفات بتتكتب بـ python3 heredoc دايما
