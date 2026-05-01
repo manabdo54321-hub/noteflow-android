@@ -41,13 +41,13 @@ fun buildMarkdownAnnotated(text: String): AnnotatedString {
                 line.startsWith("- ")      -> addStyle(SpanStyle(color = MdWhite), lineStart, lineEnd)
             }
             val inlinePatterns = listOf(
-                Regex("\*\*(.+?)\*\*") to Pair(SpanStyle(fontWeight = FontWeight.Bold, color = MdWhite), true),
-                Regex("~~(.+?)~~")          to Pair(SpanStyle(color = MdGray, textDecoration = TextDecoration.LineThrough), true),
-                Regex("==(.+?)==")          to Pair(SpanStyle(background = MdPrimary.copy(0.3f), color = MdWhite), true),
-                Regex("\*(.+?)\*")        to Pair(SpanStyle(fontStyle = FontStyle.Italic, color = MdWhite), true),
-                Regex("`(.+?)`")            to Pair(SpanStyle(color = MdTertiary, background = MdSurface), true),
-                Regex("#\w+")              to Pair(SpanStyle(color = MdPrimary), false),
-                Regex("\[\[(.+?)]]")      to Pair(SpanStyle(color = MdPrimary, textDecoration = TextDecoration.Underline), false)
+                Regex("""\*\*(.+?)\*\*""") to Pair(SpanStyle(fontWeight = FontWeight.Bold, color = MdWhite), true),
+                Regex("""~~(.+?)~~""")      to Pair(SpanStyle(color = MdGray, textDecoration = TextDecoration.LineThrough), true),
+                Regex("""==(.+?)==""")      to Pair(SpanStyle(background = MdPrimary.copy(0.3f), color = MdWhite), true),
+                Regex("""\*(.+?)\*""")      to Pair(SpanStyle(fontStyle = FontStyle.Italic, color = MdWhite), true),
+                Regex("""`(.+?)`""")        to Pair(SpanStyle(color = MdTertiary, background = MdSurface), true),
+                Regex("""#\w+""")           to Pair(SpanStyle(color = MdPrimary), false),
+                Regex("""\[\[(.+?)]]""")    to Pair(SpanStyle(color = MdPrimary, textDecoration = TextDecoration.Underline), false)
             )
             for ((regex, pair) in inlinePatterns) {
                 regex.findAll(line).forEach { match ->
