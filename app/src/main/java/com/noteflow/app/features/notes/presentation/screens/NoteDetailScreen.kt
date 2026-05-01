@@ -163,7 +163,13 @@ fun NoteDetailScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 if (isEditMode) {
-                    NoteDetailContentField(content) { content = it }
+                    NoteEditorWebView(
+                        content = content.text,
+                        onContentChange = { newText ->
+                            content = content.copy(text = newText)
+                        },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp)
+                    )
                 } else {
                     ReadModeContent(content.text, notes, onNavigateToNote, onContentChange = { content = it })
                 }

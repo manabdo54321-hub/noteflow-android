@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>NoteFlow Editor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.0.0/codemirror.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #131313;
+    color: #FFFFFF;
+    font-family: -apple-system, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #editor {
+    width: 100%;
+    height: 100vh;
+    background: #131313;
+    color: #FFFFFF;
+    font-size: 16px;
+    line-height: 1.6;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 16px;
+    direction: rtl;
+    text-align: right;
+    caret-color: #CABEFF;
+  }
+  #editor::placeholder {
+    color: rgba(200, 197, 205, 0.4);
+  }
+</style>
+</head>
+<body>
+<textarea id="editor" placeholder="واصل أفكارك..."></textarea>
+<script>
+  const editor = document.getElementById("editor");
+
+  // استقبال النص من Kotlin
+  function setContent(text) {
+    editor.value = text;
+  }
+
+  // ارسال النص لـ Kotlin عند كل تغيير
+  editor.addEventListener("input", function() {
+    if (window.NoteFlowBridge) {
+      window.NoteFlowBridge.onContentChanged(editor.value);
+    }
+  });
+
+  // focus تلقائي
+  function focusEditor() {
+    editor.focus();
+  }
+
+  // الحصول على النص الحالي
+  function getContent() {
+    return editor.value;
+  }
+</script>
+</body>
+</html>
