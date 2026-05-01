@@ -41,7 +41,14 @@ fun ObsidianToolbar(
         history.addLast(value)
         if (history.size > 40) history.removeFirst()
         redoStack.clear()
-        onValueChange(newVal)
+        val safeStart = newVal.selection.start.coerceIn(0, newVal.text.length)
+        val safeEnd   = newVal.selection.end.coerceIn(0, newVal.text.length)
+        val safe = if (safeStart == newVal.selection.start && safeEnd == newVal.selection.end) {
+            newVal
+        } else {
+            newVal.copy(selection = androidx.compose.ui.text.TextRange(safeStart, safeEnd))
+        }
+        onValueChange(safe)
     }
 
     Row(
