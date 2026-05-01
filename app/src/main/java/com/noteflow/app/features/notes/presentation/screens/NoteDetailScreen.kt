@@ -45,13 +45,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -187,26 +180,20 @@ fun NoteDetailScreen(
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
 
-        @OptIn(ExperimentalLayoutApi::class)
-        val imeVisible = WindowInsets.isImeVisible
-        AnimatedVisibility(
-            visible = isEditMode && imeVisible,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it })
-        ) {
+        if (isEditMode) {
             TagSuggestionDropdown(
-                    query = content.text,
-                    suggestions = suggestions,
-                    selectedTags = emptyList(),
-                    onQueryChange = { newText ->
-                        content = content.copy(text = newText,
-                            selection = androidx.compose.ui.text.TextRange(newText.length))
-                    },
-                    onTagSelected = { tag -> tagViewModel.selectTag(tag.id); tagViewModel.onSuggestionQuery("") },
-                    onTagRemoved = {},
-                    modifier = Modifier.fillMaxWidth().background(SurfaceColor).padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-                SharedObsidianToolbar(
+                query = content.text,
+                suggestions = suggestions,
+                selectedTags = emptyList(),
+                onQueryChange = { newText ->
+                    content = content.copy(text = newText,
+                        selection = androidx.compose.ui.text.TextRange(newText.length))
+                },
+                onTagSelected = { tag -> tagViewModel.selectTag(tag.id); tagViewModel.onSuggestionQuery("") },
+                onTagRemoved = {},
+                modifier = Modifier.fillMaxWidth().background(SurfaceColor).padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+            SharedObsidianToolbar(
                 value = content,
                 onValueChange = { content = it },
                 modifier = Modifier.navigationBarsPadding()
