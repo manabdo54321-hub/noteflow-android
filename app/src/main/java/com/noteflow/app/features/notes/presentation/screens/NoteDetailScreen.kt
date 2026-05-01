@@ -370,86 +370,6 @@ private fun NoteDetailBacklinkItem(note: Note, onNavigateToNote: (Long) -> Unit)
 }
 
 @Composable
-private fun NoteDetailBottomToolbar(isEditMode: Boolean, onAction: (String) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().background(SurfaceColor).padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically
-    ) {
-        listOf(
-            Icons.Default.TextFields to "نص",
-            Icons.Default.FormatBold to "عريض",
-            Icons.Default.FormatListBulleted to "قائمة",
-            Icons.Default.Link to "رابط",
-            Icons.Default.Tag to "تاج",
-            Icons.Default.Keyboard to "كيبورد"
-        ).forEach { (icon, label) ->
-            IconButton(onClick = { onAction(label) }) {
-                Icon(icon, contentDescription = label, tint = if (isEditMode) OnSurfaceVariant else OnSurfaceVariant.copy(alpha = 0.3f), modifier = Modifier.size(20.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun NoteDetailDeleteDialog(title: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = SurfaceColor,
-        title = { Text("حذف الملاحظة", color = Color.White) },
-        text = { Text("متأكد إنك عايز تحذف \"$title\"؟", color = OnSurfaceVariant) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("حذف", color = ErrorColor) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء", color = OnSurfaceVariant) } }
-    )
-}
-
-@Composable
-private fun parseInlineMarkdown(text: String): androidx.compose.ui.text.AnnotatedString {
-    return buildAnnotatedString {
-        var i = 0
-        val t = text
-        while (i < t.length) {
-            when {
-                t.startsWith("**", i) -> {
-                    val end = t.indexOf("**", i + 2)
-                    if (end != -1) {
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Color.White)) { append(t.substring(i + 2, end)) }
-                        i = end + 2
-                    } else { append(t[i]); i++ }
-                }
-                t.startsWith("~~", i) -> {
-                    val end = t.indexOf("~~", i + 2)
-                    if (end != -1) {
-                        withStyle(SpanStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough, color = Color.White.copy(0.6f))) { append(t.substring(i + 2, end)) }
-                        i = end + 2
-                    } else { append(t[i]); i++ }
-                }
-                t.startsWith("==", i) -> {
-                    val end = t.indexOf("==", i + 2)
-                    if (end != -1) {
-                        withStyle(SpanStyle(background = Color(0xFFCABEFF).copy(0.3f), color = Color.White)) { append(t.substring(i + 2, end)) }
-                        i = end + 2
-                    } else { append(t[i]); i++ }
-                }
-                t.startsWith("*", i) && !t.startsWith("**", i) -> {
-                    val end = t.indexOf("*", i + 1)
-                    if (end != -1) {
-                        withStyle(SpanStyle(fontStyle = FontStyle.Italic, color = Color.White)) { append(t.substring(i + 1, end)) }
-                        i = end + 1
-                    } else { append(t[i]); i++ }
-                }
-                t.startsWith("`", i) -> {
-                    val end = t.indexOf("`", i + 1)
-                    if (end != -1) {
-                        withStyle(SpanStyle(background = Color(0xFF2A2A2A), color = Color(0xFF75D1FF), fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)) { append(t.substring(i + 1, end)) }
-                        i = end + 1
-                    } else { append(t[i]); i++ }
-                }
-                else -> { append(t[i]); i++ }
-            }
-        }
-    }
-}
-
 @Composable
 private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote: (Long) -> Unit, onContentChange: (TextFieldValue) -> Unit = {}) {
     if (content.isBlank()) {
@@ -490,12 +410,12 @@ private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote
                 line.startsWith("- ") || line.startsWith("• ") -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("•", color = PrimaryColor, fontSize = 16.sp)
-                        Text(parseInlineMarkdown(line.substring(2)), color = Color.White, fontSize = 16.sp, lineHeight = 24.sp)
+                        Text(buildMarkdownAnnotated(line.substring(2)), color = Color.White, fontSize = 16.sp, lineHeight = 24.sp)
                     }
                 }
                 line.startsWith("---") -> Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(OutlineVariant.copy(alpha = 0.5f)))
                 line.contains("==") && line.count { it == '=' } >= 4 -> {
-                    Text(parseInlineMarkdown(line), color = Color.White, fontSize = 16.sp, lineHeight = 26.sp)
+                    Text(buildMarkdownAnnotated(line), color = Color.White, fontSize = 16.sp, lineHeight = 26.sp)
                 }
                 line.startsWith("> ") -> {
                     Row(modifier = Modifier.fillMaxWidth()) {
@@ -549,46 +469,3 @@ private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote
 }
 
 @Composable
-private fun NoteDetailObsidianToolbar(
-    isEditMode: Boolean,
-    content: TextFieldValue,
-    onContentChange: (TextFieldValue) -> Unit
-) {
-    if (!isEditMode) return
-    val tools = listOf("H1", "H2", "H3", "B", "I", "•", "❝", "[[", "<>", "—", "☐", "@")
-    val inserts = mapOf(
-        "H1" to "# ", "H2" to "## ", "H3" to "### ",
-        "B" to "****", "I" to "__",
-        "•" to "\n- ", "❝" to "\n> ",
-        "[[" to "[[]]", "<>" to "`<>`",
-        "—" to "—", "☐" to "- [ ] ", "@" to "@"
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(SurfaceColor)
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        tools.forEach { tool ->
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(SurfaceHigh)
-                    .clickable {
-                        val insert = inserts[tool] ?: return@clickable
-                        val cursor = content.selection.end
-                        val newText = content.text.substring(0, cursor) + insert + content.text.substring(cursor)
-                        val newCursor = cursor + insert.length
-                        onContentChange(TextFieldValue(text = newText, selection = TextRange(newCursor)))
-                    }
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(tool, fontSize = 13.sp, color = PrimaryColor, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
