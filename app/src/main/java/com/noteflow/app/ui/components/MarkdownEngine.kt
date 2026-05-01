@@ -230,12 +230,6 @@ class MarkdownVisualTransformation(
 ) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val annotated = buildMarkdownAnnotated(text.text)
-        val offsetMapping = object : OffsetMapping {
-            override fun originalToTransformed(offset: Int): Int =
-                offset.coerceIn(0, annotated.length)
-            override fun transformedToOriginal(offset: Int): Int =
-                offset.coerceIn(0, text.length)
-        }
-        return TransformedText(annotated, offsetMapping)
+        return TransformedText(annotated, OffsetMapping.Identity)
     }
 }

@@ -32,18 +32,13 @@ fun ObsidianToolbar(
     onValueChange: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var savedValue by remember { mutableStateOf(value) }
     var showHeadingMenu by remember { mutableStateOf(false) }
-
-    LaunchedEffect(value.selection, value.text) {
-        savedValue = value
-    }
 
     val history   = remember { ArrayDeque<TextFieldValue>() }
     val redoStack = remember { ArrayDeque<TextFieldValue>() }
 
     fun act(newVal: TextFieldValue) {
-        history.addLast(savedValue)
+        history.addLast(value)
         if (history.size > 40) history.removeFirst()
         redoStack.clear()
         onValueChange(newVal)
@@ -61,13 +56,13 @@ fun ObsidianToolbar(
         // ── Undo / Redo ──────────────────────────────────────
         TBtn("↩", tint = if (history.isNotEmpty()) PrimaryColor else PrimaryColor.copy(0.3f)) {
             if (history.isNotEmpty()) {
-                redoStack.addLast(savedValue)
+                redoStack.addLast(value)
                 onValueChange(history.removeLast())
             }
         }
         TBtn("↪", tint = if (redoStack.isNotEmpty()) PrimaryColor else PrimaryColor.copy(0.3f)) {
             if (redoStack.isNotEmpty()) {
-                history.addLast(savedValue)
+                history.addLast(value)
                 onValueChange(redoStack.removeLast())
             }
         }
@@ -101,7 +96,7 @@ fun ObsidianToolbar(
                             )
                         },
                         onClick = {
-                            act(tfLinePrefix(savedValue, data.first))
+                            act(tfLinePrefix(value, data.first))
                             showHeadingMenu = false
                         }
                     )
@@ -111,38 +106,38 @@ fun ObsidianToolbar(
         TDiv()
 
         // ── Inline styles ────────────────────────────────────
-        TBtn(icon = Icons.Default.FormatBold)   { act(tfWrap(savedValue, "**")) }
-        TBtn(icon = Icons.Default.FormatItalic) { act(tfWrap(savedValue, "*")) }
-        TBtn("S̶") { act(tfWrap(savedValue, "~~")) }
-        TBtn("==") { act(tfWrap(savedValue, "==")) }
-        TBtn(icon = Icons.Default.Code) { act(tfWrap(savedValue, "`")) }
+        TBtn(icon = Icons.Default.FormatBold)   { act(tfWrap(value, "**")) }
+        TBtn(icon = Icons.Default.FormatItalic) { act(tfWrap(value, "*")) }
+        TBtn("S̶") { act(tfWrap(value, "~~")) }
+        TBtn("==") { act(tfWrap(value, "==")) }
+        TBtn(icon = Icons.Default.Code) { act(tfWrap(value, "`")) }
         TDiv()
 
         // ── Lists ────────────────────────────────────────────
-        TBtn("•")  { act(tfToggleList(savedValue, "- ")) }
-        TBtn("1.") { act(tfNumbered(savedValue)) }
-        TBtn("☐")  { act(tfToggleList(savedValue, "- [ ] ")) }
+        TBtn("•")  { act(tfToggleList(value, "- ")) }
+        TBtn("1.") { act(tfNumbered(value)) }
+        TBtn("☐")  { act(tfToggleList(value, "- [ ] ")) }
         TDiv()
 
         // ── Block elements ───────────────────────────────────
-        TBtn("❝")   { act(tfLinePrefix(savedValue, "> ")) }
-        TBtn("```") { act(tfCodeBlock(savedValue)) }
-        TBtn("⊞")   { act(tfTable(savedValue)) }
-        TBtn("—")   { act(tfCursor(savedValue, "\n---\n")) }
+        TBtn("❝")   { act(tfLinePrefix(value, "> ")) }
+        TBtn("```") { act(tfCodeBlock(value)) }
+        TBtn("⊞")   { act(tfTable(value)) }
+        TBtn("—")   { act(tfCursor(value, "\n---\n")) }
         TDiv()
         // ── Callouts ─────────────────────────────────────────
-        TBtn("!") { act(tfCursor(savedValue, "> [!INFO] ")) }
+        TBtn("!") { act(tfCursor(value, "> [!INFO] ")) }
         TDiv()
         // ── Links & tags ─────────────────────────────────────
-        TBtn("[[") { act(tfWikiLink(savedValue)) }
-        TBtn("![[") { act(tfCursor(savedValue, "![[]]")) }
-        TBtn("[]()"){ act(tfCursor(savedValue, "[](url)")) }
-        TBtn("#")  { act(tfTag(savedValue)) }
+        TBtn("[[") { act(tfWikiLink(value)) }
+        TBtn("![[") { act(tfCursor(value, "![[]]")) }
+        TBtn("[]()"){ act(tfCursor(value, "[](url)")) }
+        TBtn("#")  { act(tfTag(value)) }
         TDiv()
 
         // ── Indent ───────────────────────────────────────────
-        TBtn("→") { act(tfLinePrefix(savedValue, "  ")) }
-        TBtn("←") { act(tfRmPrefix(savedValue, "  ")) }
+        TBtn("→") { act(tfLinePrefix(value, "  ")) }
+        TBtn("←") { act(tfRmPrefix(value, "  ")) }
     }
 }
 
