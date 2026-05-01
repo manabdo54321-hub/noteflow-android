@@ -17,7 +17,7 @@
 - RingtoneManager (جرس التايمر)
 - NotificationManager (DND للوضع الصارم)
 
-## إعدادات البناء (مهم جداً لا تغير)
+## اعدادات البناء (مهم جدا لا تغير)
 - **minSdk:** 26
 - **compileSdk:** 34
 - **targetSdk:** 34
@@ -34,7 +34,7 @@
 - USE_EXACT_ALARM
 - ACCESS_NOTIFICATION_POLICY
 
-## إعدادات الـ Theme
+## اعدادات الـ Theme
 - **themes.xml:** parent="Theme.AppCompat.DayNight.NoActionBar"
 - لا تستخدم parent="android:Theme.DeviceDefault"
 - **windowSoftInputMode:** adjustResize
@@ -89,6 +89,8 @@
 - المرحلة 17 - CrashLogScreen
 - المرحلة A  - WebView + CodeMirror 6 offline
 - المرحلة B  - Toolbar JavaScript Bridge
+- المرحلة C  - Live Preview اساسي (bold italic headings checkboxes bullets)
+- المرحلة C2 - Live Preview كامل (24 عنصر Markdown)
 
 ## Hybrid Editor System - مكتمل
 
@@ -103,7 +105,49 @@
 - executeCommand - function بتبعت JavaScript commands للـ WebView
 - ObsidianToolbar - onCommand parameter جديد بيبعت commands
 
-### Commands المتاحة
+### Live Preview - المرحلة C2 مكتملة
+كل العناصر دي بتتrender بعيد عن الكيرسور وبترجع raw لما الكيرسور جوه:
+1. Bold **text** - عريض بدون نجوم
+2. Italic *text* - مائل
+3. Bold+Italic ***text*** - عريض ومائل
+4. Strikethrough ~~text~~ - مشطوب
+5. Highlight ==text== - خلفية صفراء
+6. Inline Code `code` - monospace ملون
+7. Code Block ```lang``` - بلوك منسق + lp-codeblock class
+8. Headings # H1 الى ###### H6 - تكبير + اخفاء #
+9. Blockquote > text - border يمين + italic
+10. Bullet List - item - نقطة ملونة
+11. Numbered List 1. item - رقم ملون
+12. Task List - [ ] و - [x] - checkbox حقيقي قابل للضغط
+13. Horizontal Rule --- او *** او ___ - خط متدرج
+14. External Link [text](url) - نص ملون بدون اقواس
+15. Wiki Link [[note]] - بنفسجي بدون اقواس
+16. Alias Link [[note|اسم]] - الاسم البديل فقط
+17. Embed ![[note]] - ايقونة + اسم
+18. Image ![[img.png]] او 
+
+![alt](url)
+
+ - ايقونة + اسم
+19. Table | a | b | - صفوف ملونة + اخفاء separator
+20. Footnote Ref [^1] - superscript رقم
+21. Footnote Def [^1]: text - نص رمادي صغير
+22. Escape \* - اخفاء backslash
+23. HTML <b>text</b> - render النص بدون tags
+24. Tags #tag - chip ملون
+25. Comment %%text%% - مختفي كامل
+
+### قاعدة الكيرسور
+- cursorInside(state, from, to) - لو الكيرسور جوه الـ range يرجع raw markdown
+- sel.from <= to && sel.to >= from - الشرط الصحيح
+
+### قواعد index.js
+- cm6-build/ في home directory مش جوا المشروع
+- لو عايز تعدل: عدل ~/cm6-build/index.js ثم esbuild ثم التغيير بيتنعكس تلقائيا
+- الكتابة دايما بـ python3 heredoc - جزء 1 (write) ثم جزء 2 (append)
+- Build command: cd ~/cm6-build && npx esbuild index.js --bundle --minify --outfile=~/noteflow-android/app/src/main/assets/cm6.bundle.js
+
+### Commands المتاحة في executeCommand
 - undo, redo
 - bold, italic, strikethrough, highlight, inlineCode
 - h1, h2, h3, h4, h5, h6
@@ -111,12 +155,6 @@
 - quote, codeblock, table, hr
 - wikilink, embed, link, tag
 - indent, unindent, callout
-
-### قواعد مهمة
-- cm6-build/ في home directory مش جوا المشروع
-- لو عايز تعدل JavaScript: عدل ~/cm6-build/index.js ثم esbuild ثم cp للـ assets
-- ObsidianToolbar لو onCommand موجود يبعت JS command لو null يشتغل على TextFieldValue
-- المرحلة C الجاية: Live Preview - bold يظهر عريض بدون النجوم
 
 ## Obsidian Toolbar System - مكتمل
 
@@ -128,67 +166,35 @@
 ### ازرار الـ Toolbar الحالية
 - Undo / Redo
 - H1 H6 Dropdown (زرار واحد يفتح قائمة)
-- Bold
-- Italic
-- Strikethrough
-- Highlight
-- Inline Code
-- Bullet List
-- Numbered List
-- Checkbox
-- Blockquote
-- Code Block
-- Table
-- Horizontal Rule
-- Callout
-- Wiki Link
-- Embed
-- External Link
-- Tag
+- Bold, Italic, Strikethrough, Highlight, Inline Code
+- Bullet List, Numbered List, Checkbox
+- Blockquote, Code Block, Table, Horizontal Rule
+- Callout, Wiki Link, Embed, External Link, Tag
 - Indent / Unindent
 
-### MarkdownEngine - Rendering مكتمل
+### MarkdownEngine - Rendering مكتمل (Kotlin - للـ QuickWrite فقط)
 - H1 H6 باحجام مختلفة
 - Bold, Italic, Strikethrough, Highlight
 - Inline Code, Code Block
-- Blockquote عادي
-- Horizontal Rule
-- Checkboxes
+- Blockquote, Horizontal Rule, Checkboxes
 - Bullet List, Numbered List
 - Callouts بالوان: INFO WARNING TIP DANGER QUESTION NOTE
-- Wiki Link بلون بنفسجي + underline
-- Embed بلون تركواز + underline
-- External Link بلون ازرق + underline
-- Tags بلون بنفسجي
-- Hidden Comment - بيختفي في الـ rendering
-
-### اخطاء حدثت وتم حلها
-- MarkdownEngine.kt اتمسح بسبب nano - تم اعادة كتابته بـ cat
-- UnicodeEncodeError في Python بسبب emoji - تم استبداله بنص عادي
-- grep bash error مع ![[  - بسبب bash history expansion
-- HorizontalDivider غير موجود في BOM 2023.08.00 - استخدم Box
-- padding(bottom=) في Modifier غير صحيح - استخدم offset(y=)
-- toArgb() في GraphRenderer كان خطا - تم حذفه
-- HomeLeftDrawer params كانت ناقصة onNavigateToGraph
+- Wiki Link, Embed, External Link, Tags
+- Hidden Comment
 
 ## Goals System - مكتمل
-- Goal.kt - domain model
-- GoalEntity.kt - Room entity
-- GoalDao.kt - CRUD + Flow
+- Goal.kt, GoalEntity.kt, GoalDao.kt
 - GoalRepository interface + GoalRepositoryImpl
 - AppDatabase version=6 + migration goals table
 - AppModule - GoalDao + GoalRepository
-- GoalViewModel
-- GoalsScreen.kt
-- GoalsComponents.kt
-- GoalAddEditDialog.kt
-- GoalsUtils.kt
+- GoalViewModel, GoalsScreen.kt, GoalsComponents.kt
+- GoalAddEditDialog.kt, GoalsUtils.kt
 - AppNavigation - route "goals" مضاف
 
 ## Tags System - مكتمل
 - Tag.kt, TagRepository.kt, TagExtractor.kt
 - TagEntity, NoteTagCrossRef, TaskTagCrossRef, GoalTagCrossRef
-- TagDao, AppDatabase migration 4 5
+- TagDao, AppDatabase migration 4->5
 - TagRepositoryImpl
 - TagViewModel - allTags, suggestions, selectedTagId, taskIdsByTag
 - TagSuggestionDropdown, TagDashboardScreen
@@ -203,17 +209,12 @@
 ## Graph System - مكتمل جزئيا
 
 ### الملفات الموجودة
-- features/graph/domain/GraphNode.kt - NodeType, NodeIntent, EdgeType, GraphMode, GraphNode, Edge, GraphState
+- features/graph/domain/GraphNode.kt
 - features/graph/domain/GraphEngine.kt - Verlet Physics + Forces
-- features/graph/presentation/GraphViewModel.kt - State + Data من Room
-- features/graph/presentation/RenderModels.kt - RenderNode, RenderEdge, GraphSettings
-- features/graph/presentation/GraphRenderer.kt - Canvas drawing functions
-- features/graph/presentation/GraphScreen.kt - الشاشة الكاملة
-
-### HomeScreen - زر الخريطة
-- زر ShowChart في TopBar بيفتح route "graph"
-- onNavigateToGraph مضاف للـ HomeScreen و AppNavigation
-- onNavigateToStats لسه موجود للـ Drawer
+- features/graph/presentation/GraphViewModel.kt
+- features/graph/presentation/RenderModels.kt
+- features/graph/presentation/GraphRenderer.kt
+- features/graph/presentation/GraphScreen.kt
 
 ### اللي ناقص في Graph (بالترتيب)
 - المرحلة 14C UI - ايقونات جوا الـ nodes + labels كـ chips + glow قوي
@@ -230,52 +231,30 @@
 - الخلط = crash مضمون
 - كل Composable اكبر من 150 سطر يتقسم
 
-## اخطاء حدثت وتم حلها (الجلسة الحالية)
-- MarkdownVisualTransformation كانت بتحذف الـ prefixes زي "# " و"## " من النص فبتنتج AnnotatedString اقصر من الاصلي - تم حل بكتابة buildMarkdownAnnotated من الصفر بـ append(text) كامل ثم addStyle فقط
-- OffsetMapping.Identity كان بيعمل crash لان transformed text اقصر من original - السبب كان في buildMarkdownAnnotated مش في OffsetMapping
-- ObsidianToolbar كان فيه savedValue و LaunchedEffect بيسببوا stale state - تم حذفهم واستخدام value مباشرة
-- NoteDetailObsidianToolbar و NoteDetailBottomToolbar كانوا كود ميت - تم حذفهم
-- parseInlineMarkdown كانت مكررة مع MarkdownEngine - تم حذفها واستبدالها بـ buildMarkdownAnnotated
-- IntroScreen و OnboardingScreen كانوا معزولين عن AppNavigation - تم حذفهم
-- sceneview dependency كان 28 ميجا بلا استخدام - تم حذفه (حجم APK من 44MB الى 16MB)
-- fantasy_tree.glb كان في assets بلا استخدام - تم حذفه
-- NoteDetailDeleteDialog اتحذف بالغلط مع الكود الميت - تم استعادته
-- Regex في MarkdownEngine كانت بـ double quotes فبتعمل Illegal escape - تم تحويلها لـ triple quotes
-- SharedObsidianToolbar كان جوا AnimatedVisibility مرتبط بـ imeVisible - لما تضغط زرار الكيبورد بيختفي فالتغيير مش بيحصل - تم فصله وربطه بـ isEditMode فقط
-- MarkdownEngine.kt.save كان في مسار الكود - تم حذفه
-- @Composable يتيم اتحذف بعد cleanup - تم حذفه
-- smart quotes في NoteDetailDeleteDialog بدل double quotes عادية - تم تصحيحها
-
-## المرحلة الجاية - Hybrid Editor
-- القرار: تحويل محرر النصوص لـ WebView + CodeMirror 6
-- المرحلة A: WebView + CodeMirror 6 في assets (offline كامل)
-- المرحلة B: JavaScript Bridge للـ Toolbar (Kotlin يبعت اوامر لـ JavaScript)
-- المرحلة C: Live Preview حقيقي (bold italic headings بدون علامات)
-- المرحلة D: Graph View بـ D3.js بدل Canvas
-
-## قواعد مهمة اتعلمناها
-- buildMarkdownAnnotated لازم تعمل append(text) الاول وبعدين addStyle فقط - ما تحذفش اي حرف
-- Regex في Kotlin لازم triple quotes مش double quotes
-- ObsidianToolbar لازم يكون مرئي دايما في edit mode مش مرتبط بـ imeVisible
-- لما تحذف كود بالـ line index ابدأ من الاخر للاول عشان الـ index ما يتغيرش
-- smart quotes بتيجي لما تكتب نص عربي في Python heredoc - استخدم escaped quotes
+## اخطاء حدثت وتم حلها
+- MarkdownVisualTransformation كانت بتحذف الـ prefixes - تم حل بـ buildMarkdownAnnotated
+- OffsetMapping.Identity كان بيعمل crash - السبب في buildMarkdownAnnotated مش OffsetMapping
+- ObsidianToolbar savedValue و LaunchedEffect بيسببوا stale state - تم حذفهم
+- NoteDetailObsidianToolbar و NoteDetailBottomToolbar كود ميت - تم حذفهم
+- sceneview dependency 28 ميجا بلا استخدام - تم حذفه (APK من 44MB الى 16MB)
+- NoteDetailDeleteDialog اتحذف بالغلط - تم استعادته
+- Regex في MarkdownEngine بـ double quotes - تم تحويلها لـ triple quotes
+- SharedObsidianToolbar مرتبط بـ imeVisible - تم فصله وربطه بـ isEditMode
+- decorations overlap في livePreviewPlugin - تم حل بـ lastTo tracking
+- cursorInside كان sel.from >= from && sel.to <= to (خطا) - تم تصحيحه لـ sel.from <= to && sel.to >= from
 
 ## الناقص (الاولوية بالترتيب)
-1. المرحلة C - Live Preview (bold بدون نجوم)
-2. المرحلة D - Graph View بـ D3.js
-3. تحسين شكل GraphScreen (ايقونات + chips + glow)
-4. Footnote في MarkdownEngine
-5. Alias Link في MarkdownEngine
-6. SearchScreen حقيقي
-7. الضوضاء البيضاء - ملفات mp3
-8. AI Integration بـ Groq
-9. Export PDF
-10. مسح crash logger من NoteFlowApp
+1. المرحلة D - Graph View بـ D3.js بدل Canvas
+2. تحسين شكل GraphScreen (ايقونات + chips + glow) - المرحلة 14C UI
+3. SearchScreen حقيقي
+4. الضوضاء البيضاء - ملفات mp3
+5. AI Integration بـ Groq
+6. Export PDF
+7. مسح crash logger من NoteFlowApp
 
 ## قواعد العمل من Termux
 - الملفات بتتكتب بـ python3 heredoc دايما
 - لا تستخدم cat > file << EOF - بيعمل مشاكل
-- التعديلات الصغيرة - python3 heredoc
 - nano 9.0 مثبت لكن خطر على ملفات كبيرة
 - كل ملف 100-150 سطر max
 - لا تستخدم printf مع نصوص عربية
