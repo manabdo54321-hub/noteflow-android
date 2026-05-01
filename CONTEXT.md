@@ -84,6 +84,9 @@
 - المرحلة 14A - Graph Data Layer
 - المرحلة 14B - Physics Engine (Verlet + Vector Forces)
 - المرحلة 14C - GraphScreen + GraphRenderer + RenderModels + Graph navigation
+- المرحلة 15 - اصلاح OffsetMapping crash في MarkdownEngine
+- المرحلة 16 - تنظيف الكود الميت
+- المرحلة 17 - CrashLogScreen
 
 ## Obsidian Toolbar System - مكتمل
 
@@ -196,6 +199,36 @@
 - GraphRenderer = صفر Physics
 - الخلط = crash مضمون
 - كل Composable اكبر من 150 سطر يتقسم
+
+## اخطاء حدثت وتم حلها (الجلسة الحالية)
+- MarkdownVisualTransformation كانت بتحذف الـ prefixes زي "# " و"## " من النص فبتنتج AnnotatedString اقصر من الاصلي - تم حل بكتابة buildMarkdownAnnotated من الصفر بـ append(text) كامل ثم addStyle فقط
+- OffsetMapping.Identity كان بيعمل crash لان transformed text اقصر من original - السبب كان في buildMarkdownAnnotated مش في OffsetMapping
+- ObsidianToolbar كان فيه savedValue و LaunchedEffect بيسببوا stale state - تم حذفهم واستخدام value مباشرة
+- NoteDetailObsidianToolbar و NoteDetailBottomToolbar كانوا كود ميت - تم حذفهم
+- parseInlineMarkdown كانت مكررة مع MarkdownEngine - تم حذفها واستبدالها بـ buildMarkdownAnnotated
+- IntroScreen و OnboardingScreen كانوا معزولين عن AppNavigation - تم حذفهم
+- sceneview dependency كان 28 ميجا بلا استخدام - تم حذفه (حجم APK من 44MB الى 16MB)
+- fantasy_tree.glb كان في assets بلا استخدام - تم حذفه
+- NoteDetailDeleteDialog اتحذف بالغلط مع الكود الميت - تم استعادته
+- Regex في MarkdownEngine كانت بـ double quotes فبتعمل Illegal escape - تم تحويلها لـ triple quotes
+- SharedObsidianToolbar كان جوا AnimatedVisibility مرتبط بـ imeVisible - لما تضغط زرار الكيبورد بيختفي فالتغيير مش بيحصل - تم فصله وربطه بـ isEditMode فقط
+- MarkdownEngine.kt.save كان في مسار الكود - تم حذفه
+- @Composable يتيم اتحذف بعد cleanup - تم حذفه
+- smart quotes في NoteDetailDeleteDialog بدل double quotes عادية - تم تصحيحها
+
+## المرحلة الجاية - Hybrid Editor
+- القرار: تحويل محرر النصوص لـ WebView + CodeMirror 6
+- المرحلة A: WebView + CodeMirror 6 في assets (offline كامل)
+- المرحلة B: JavaScript Bridge للـ Toolbar (Kotlin يبعت اوامر لـ JavaScript)
+- المرحلة C: Live Preview حقيقي (bold italic headings بدون علامات)
+- المرحلة D: Graph View بـ D3.js بدل Canvas
+
+## قواعد مهمة اتعلمناها
+- buildMarkdownAnnotated لازم تعمل append(text) الاول وبعدين addStyle فقط - ما تحذفش اي حرف
+- Regex في Kotlin لازم triple quotes مش double quotes
+- ObsidianToolbar لازم يكون مرئي دايما في edit mode مش مرتبط بـ imeVisible
+- لما تحذف كود بالـ line index ابدأ من الاخر للاول عشان الـ index ما يتغيرش
+- smart quotes بتيجي لما تكتب نص عربي في Python heredoc - استخدم escaped quotes
 
 ## الناقص (الاولوية بالترتيب)
 1. تحسين شكل GraphScreen (ايقونات + chips + glow)
