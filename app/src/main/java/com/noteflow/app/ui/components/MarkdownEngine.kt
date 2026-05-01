@@ -82,9 +82,9 @@ fun buildMarkdownColorsOnly(text: String): AnnotatedString {
             Regex("""#\w+""") to SpanStyle(color = MdPrimary),
             Regex("""\[\[(.+?)]]""") to SpanStyle(color = MdPrimary, textDecoration = TextDecoration.Underline),
             Regex("""^#{1,6} .+""", RegexOption.MULTILINE) to SpanStyle(color = MdPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
-            Regex("^> .+", RegexOption.MULTILINE) to SpanStyle(color = MdGray),
-            Regex("^- .+", RegexOption.MULTILINE) to SpanStyle(color = MdWhite),
-            Regex("^\d+\. .+", RegexOption.MULTILINE) to SpanStyle(color = MdWhite)
+            Regex("""^> .+""", RegexOption.MULTILINE) to SpanStyle(color = MdGray),
+            Regex("""^- .+""", RegexOption.MULTILINE) to SpanStyle(color = MdWhite),
+            Regex("""^\d+\. .+""", RegexOption.MULTILINE) to SpanStyle(color = MdWhite)
         )
         for ((regex, style) in patterns) {
             regex.findAll(text).forEach { match ->
