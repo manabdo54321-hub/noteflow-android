@@ -4,62 +4,57 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>NoteFlow Editor</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.0.0/codemirror.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="codemirror.min.css">
+<script src="codemirror.min.js"></script>
+<script src="markdown.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #131313;
-    color: #FFFFFF;
-    font-family: -apple-system, sans-serif;
-    height: 100vh;
-    overflow: hidden;
-  }
-  #editor {
-    width: 100%;
+  body { background: #131313; height: 100vh; overflow: hidden; }
+  .CodeMirror {
     height: 100vh;
     background: #131313;
     color: #FFFFFF;
     font-size: 16px;
     line-height: 1.6;
-    border: none;
-    outline: none;
-    resize: none;
-    padding: 16px;
     direction: rtl;
-    text-align: right;
-    caret-color: #CABEFF;
+    font-family: -apple-system, sans-serif;
   }
-  #editor::placeholder {
-    color: rgba(200, 197, 205, 0.4);
-  }
+  .CodeMirror-cursor { border-left: 2px solid #CABEFF; }
+  .CodeMirror-selected { background: #2A2A2A; }
+  .CodeMirror-scroll { padding: 16px; }
+  .CodeMirror-placeholder { color: rgba(200,197,205,0.4) !important; }
 </style>
 </head>
 <body>
-<textarea id="editor" placeholder="واصل أفكارك..."></textarea>
+<textarea id="editor"></textarea>
 <script>
-  const editor = document.getElementById("editor");
+  var cm = CodeMirror.fromTextArea(document.getElementById("editor"), {
+    mode: "markdown",
+    theme: "default",
+    lineWrapping: true,
+    autofocus: true,
+    placeholder: "واصل افكارك...",
+    rtlMoveVisually: true,
+    extraKeys: {}
+  });
 
-  // استقبال النص من Kotlin
-  function setContent(text) {
-    editor.value = text;
-  }
-
-  // ارسال النص لـ Kotlin عند كل تغيير
-  editor.addEventListener("input", function() {
+  cm.on("change", function() {
     if (window.NoteFlowBridge) {
-      window.NoteFlowBridge.onContentChanged(editor.value);
+      window.NoteFlowBridge.onContentChanged(cm.getValue());
     }
   });
 
-  // focus تلقائي
-  function focusEditor() {
-    editor.focus();
+  function setContent(text) {
+    cm.setValue(text);
+    cm.setCursor(cm.lineCount(), 0);
   }
 
-  // الحصول على النص الحالي
   function getContent() {
-    return editor.value;
+    return cm.getValue();
+  }
+
+  function focusEditor() {
+    cm.focus();
   }
 </script>
 </body>
