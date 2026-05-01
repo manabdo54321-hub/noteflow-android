@@ -1,6 +1,9 @@
 package com.noteflow.app.ui.screens
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +22,7 @@ fun CrashLogScreen() {
     val context = LocalContext.current
     val crashFile = File(context.cacheDir, "crash_log.txt")
     val crashLog = remember { if (crashFile.exists()) crashFile.readText() else "" }
+    var copied by remember { mutableStateOf(false) }
 
     if (crashLog.isBlank()) return
 
@@ -41,14 +45,26 @@ fun CrashLogScreen() {
             Text(crashLog, color = Color.White, fontSize = 11.sp, lineHeight = 16.sp)
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Button(
-            onClick = {
-                crashFile.delete()
-                (context as? Activity)?.recreate()
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8A70FF))
-        ) {
-            Text("امسح وكمل", color = Color.White)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("crash", crashLog))
+                    copied = true
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF75D1FF))
+            ) {
+                Text(if (copied) "تم النسخ!" else "انسخ الخطأ", color = Color.Black)
+            }
+            Button(
+                onClick = {
+                    crashFile.delete()
+                    (context as? Activity)?.recreate()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8A70FF))
+            ) {
+                Text("امسح وكمل", color = Color.White)
+            }
         }
     }
 }
