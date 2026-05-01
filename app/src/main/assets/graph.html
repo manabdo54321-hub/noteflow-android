@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang='ar'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#131313; overflow:hidden; font-family:sans-serif; }
+canvas { display:block; }
+#tooltip {
+  position:absolute; background:#1C1B1B; color:#fff;
+  padding:6px 10px; border-radius:8px; font-size:12px;
+  pointer-events:none; display:none; border:1px solid #2A2A2A;
+}
+#info {
+  position:absolute; top:16px; left:16px; color:#666;
+  font-size:12px;
+}
+</style>
+</head>
+<body>
+<div id='tooltip'></div>
+<div id='info'>NoteFlow Graph</div>
+<svg id='graph-svg' width='100%' height='100%'>
+  <g id='zoom-layer'>
+    <g id='edges-layer'></g>
+    <g id='nodes-layer'></g>
+  </g>
+</svg>
+<script src='file:///android_asset/d3.min.js'></script>
+<script>
+const COLOR = {
+  NOTE: '#CABEFF',
+  TASK: '#75D1FF',
+  GOAL: '#8A70FF',
+  TAG:  '#FFD700',
+  BG:   '#131313',
+  SURFACE: '#1C1B1B',
+  EDGE: '#2A2A2A'
+};
+
+let simulation, svg, zoomLayer, nodesLayer, edgesLayer;
+let currentData = { nodes: [], edges: [] };
+let focusedId = null;
+
+function init() {
+  svg = d3.select('#graph-svg');
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 4])
+    .on('zoom', (e) => {
+      zoomLayer.attr('transform', e.transform);
+    });
+  svg.call(zoom);
+  zoomLayer   = d3.select('#zoom-layer');
+  edgesLayer  = d3.select('#edges-layer');
+  nodesLayer  = d3.select('#nodes-layer');
+}
+
+function buildGraph(data) {
+  currentData = data;
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+
+  edgesLayer.selectAll('*').remove();
+  nodesLayer.selectAll('*').remove();
+
+  const nodes = data.nodes.map(n => Object.assign({}, n));
+  const edges = data.edges.map(e => Object.assign({}, e));
+
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edges)
+      .id(d => d.id)
+      .distance(120)
+      .strength(d => d.strength || 0.5))
+    .force('charge', d3.forceManyBody().strength(-400))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('collision', d3.forceCollide().radius(30));
+
+  const link = edgesLayer.selectAll('line')
+    .data(edges)
+    .join('line')
+    .attr('stroke', COLOR.EDGE)
+    .attr('stroke-width', d => (d.strength || 0.5) * 2)
+    .attr('stroke-opacity', 0.6);
+
+  const nodeGroup = nodesLayer.selectAll('g')
+    .data(nodes)
+    .join('g')
+    .attr('cursor', 'pointer')
+    .call(d3.drag()
+      .on('start', dragStart)
+      .on('drag',  dragging)
+      .on('end',   dragEnd))
+    .on('click', (e, d) => nodeClick(d))
+    .on('mouseover', (e, d) => nodeHover(e, d, true))
+    .on('mouseout',  (e, d) => nodeHover(e, d, false));
+
+  nodeGroup.append('circle')
+    .attr('r', d => 8 + (d.linkCount || 0) * 2)
+    .attr('fill', d => COLOR[d.type] || COLOR.NOTE)
+    .attr('fill-opacity', 0.9)
+    .attr('stroke', '#131313')
+    .attr('stroke-width', 2);
+
+  nodeGroup.append('text')
+    .text(d => d.label.length > 14 ? d.label.slice(0,14)+'...' : d.label)
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => (8 + (d.linkCount||0)*2) + 14)
+    .attr('fill', '#aaa')
+    .attr('font-size', '10px');
+
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    nodeGroup.attr('transform', d => 'translate('+d.x+','+d.y+')');
+  });
+}
+
+function dragStart(e, d) {
+  if (!e.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+function dragging(e, d) { d.fx = e.x; d.fy = e.y; }
+function dragEnd(e, d) {
+  if (!e.active) simulation.alphaTarget(0);
+  d.fx = null; d.fy = null;
+}
+
+function nodeClick(d) {
+  if (window.Android) window.Android.onNodeClick(d.id);
+}
+
+function nodeHover(e, d, on) {
+  const tip = document.getElementById('tooltip');
+  if (on) {
+    tip.style.display = 'block';
+    tip.style.left = (e.pageX + 12) + 'px';
+    tip.style.top  = (e.pageY - 8)  + 'px';
+    tip.textContent = d.label;
+    highlightNode(d.id, true);
+  } else {
+    tip.style.display = 'none';
+    highlightNode(d.id, false);
+  }
+}
+
+function highlightNode(id, on) {
+  edgesLayer.selectAll('line')
+    .attr('stroke', l => {
+      if (!on) return COLOR.EDGE;
+      return (l.source.id===id||l.target.id===id) ? '#CABEFF' : COLOR.EDGE;
+    })
+    .attr('stroke-opacity', l => {
+      if (!on) return 0.6;
+      return (l.source.id===id||l.target.id===id) ? 1.0 : 0.15;
+    });
+  nodesLayer.selectAll('g')
+    .attr('opacity', n => {
+      if (!on) return 1;
+      return (n.id===id) ? 1 : 0.3;
+    });
+}
+
+function loadData(jsonStr) {
+  try {
+    const data = JSON.parse(jsonStr);
+    buildGraph(data);
+  } catch(ex) {
+    console.error('loadData error:', ex);
+  }
+}
+
+window.addEventListener('resize', () => {
+  if (simulation) simulation.force('center', d3.forceCenter(window.innerWidth/2, window.innerHeight/2));
+});
+
+init();
+</script>
+</body>
+</html>

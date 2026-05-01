@@ -106,7 +106,7 @@ fun AppNavigation(
                 WorldScreen(onBack = { navController.popBackStack() })
             }
             composable("graph") {
-                GraphScreen(onBack = { navController.popBackStack() })
+                GraphScreen(onBack = { navController.popBackStack() }, onNoteClick = { id -> navController.navigate("note/$id") })
             }
             composable("goals") {
                 GoalsScreen()
