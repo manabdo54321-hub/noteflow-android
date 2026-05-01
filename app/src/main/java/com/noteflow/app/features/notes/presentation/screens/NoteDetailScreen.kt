@@ -468,4 +468,3 @@ private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote
     }
 }
 
-@Composable
