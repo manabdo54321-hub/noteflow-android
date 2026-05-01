@@ -229,7 +229,31 @@ class MarkdownVisualTransformation(
     private val onSurface: Color = MdWhite
 ) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
-        val annotated = buildMarkdownAnnotated(text.text)
+        val annotated = buildMarkdownColorsOnly(text.text)
         return TransformedText(annotated, OffsetMapping.Identity)
+    }
+}
+
+fun buildMarkdownColorsOnly(text: String): AnnotatedString {
+    return buildAnnotatedString {
+        append(text)
+        val patterns = listOf(
+            Regex("\*\*(.+?)\*\*") to SpanStyle(color = MdWhite, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+            Regex("\*(.+?)\*") to SpanStyle(color = MdWhite, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
+            Regex("~~(.+?)~~") to SpanStyle(color = MdGray, textDecoration = TextDecoration.LineThrough),
+            Regex("==(.+?)==") to SpanStyle(background = MdPrimary.copy(alpha = 0.3f), color = MdWhite),
+            Regex("`(.+?)`") to SpanStyle(color = MdTertiary, background = MdSurface),
+            Regex("#\w+") to SpanStyle(color = MdPrimary),
+            Regex("\[\[(.+?)]]") to SpanStyle(color = MdPrimary, textDecoration = TextDecoration.Underline),
+            Regex("^#{1,6} .+", RegexOption.MULTILINE) to SpanStyle(color = MdPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+            Regex("^> .+", RegexOption.MULTILINE) to SpanStyle(color = MdGray),
+            Regex("^- .+", RegexOption.MULTILINE) to SpanStyle(color = MdWhite),
+            Regex("^\d+\. .+", RegexOption.MULTILINE) to SpanStyle(color = MdWhite)
+        )
+        for ((regex, style) in patterns) {
+            regex.findAll(text).forEach { match ->
+                addStyle(style, match.range.first, match.range.last + 1)
+            }
+        }
     }
 }
