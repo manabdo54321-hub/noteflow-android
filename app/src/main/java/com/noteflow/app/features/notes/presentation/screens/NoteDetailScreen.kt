@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.noteflow.app.features.notes.domain.model.Note
 import com.noteflow.app.features.notes.presentation.NoteViewModel
+import com.noteflow.app.ui.components.buildMarkdownAnnotated
 import com.noteflow.app.features.tags.presentation.TagViewModel
 import com.noteflow.app.features.tags.presentation.TagSuggestionDropdown
 import com.noteflow.app.features.tags.presentation.extractCurrentTagPrefix
@@ -370,6 +371,17 @@ private fun NoteDetailBacklinkItem(note: Note, onNavigateToNote: (Long) -> Unit)
 }
 
 @Composable
+private fun NoteDetailDeleteDialog(title: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceColor,
+        title = { Text("حذف الملاحظة", color = Color.White) },
+        text = { Text("متأكد إنك عايز تحذف "$title"؟", color = OnSurfaceVariant) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("حذف", color = ErrorColor) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء", color = OnSurfaceVariant) } }
+    )
+}
+
 @Composable
 private fun ReadModeContent(content: String, notes: List<Note>, onNavigateToNote: (Long) -> Unit, onContentChange: (TextFieldValue) -> Unit = {}) {
     if (content.isBlank()) {
