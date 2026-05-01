@@ -376,7 +376,7 @@ private fun NoteDetailDeleteDialog(title: String, onConfirm: () -> Unit, onDismi
         onDismissRequest = onDismiss,
         containerColor = SurfaceColor,
         title = { Text("حذف الملاحظة", color = Color.White) },
-        text = { Text("متأكد إنك عايز تحذف "$title"؟", color = OnSurfaceVariant) },
+        text = { Text("متأكد إنك عايز تحذف \"$title\"؟", color = OnSurfaceVariant) },
         confirmButton = { TextButton(onClick = onConfirm) { Text("حذف", color = ErrorColor) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء", color = OnSurfaceVariant) } }
     )
